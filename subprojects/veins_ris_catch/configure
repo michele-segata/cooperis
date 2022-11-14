@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python2
 
 #
 # Copyright (C) 2013-2019 Christoph Sommer <sommer@ccs-labs.org>
@@ -38,29 +38,51 @@ if sys.version_info[0] == 3:
 
 # Option handling
 parser = OptionParser()
-parser.add_option("--with-veins", dest="veins", help="link with a version of Veins installed in PATH [default: ../veins]", metavar="PATH", default="../veins")
-parser.add_option("--with-gsl-include", dest="gslinc", help="search for GSL includes in PATH. Hint: you can use pkg-config --cflags gsl to find such directory", metavar="PATH")
-parser.add_option("--with-gsl-lib", dest="gsllib", help="search for GSL lib in PATH. Hint: you can use pkg-config --libs gsl to find such directory", metavar="PATH")
+parser.add_option("--with-veins-ris", dest="veins_ris", help="link with a version of Veins RIS installed in PATH [default: ../..]", metavar="PATH", default="../..")
+parser.add_option("--with-veins", dest="veins", help="link with a version of Veins installed in PATH [default: ../../../veins]", metavar="PATH", default="../../../veins")
 (options, args) = parser.parse_args()
 
 if args:
     warning("Superfluous command line arguments: \"%s\"" % " ".join(args))
 
-if options.gslinc is None or options.gsllib is None:
-    error("This project requires the GNU Scientific Library (GSL). Please specify the PATH where include and lib files can be found using the --with-gsl-include and --with-gsl-lib arguments")
-    sys.exit(1)
 
 # Start with default flags
-makemake_flags = ['-f', '--deep', '--no-deep-includes', '--make-so', '-I', '.', '-o', 'veins-ris', '-O', 'out', '-p', 'VEINS_RIS', '-I', options.gslinc, '-lgsl', '-lgslcblas', '-lm']
-run_libs = [os.path.join('src', 'veins-ris'), options.gsllib]
-run_neds = [os.path.join('src', 'veins-ris')]
-run_imgs = [os.path.join('images')]
+makemake_flags = ['--make-so', '-f', '--deep', '-I', '.', '-O', 'out']
+run_lib_paths = []
+
+
+# Add flags for Veins RIS
+if options.veins_ris:
+    fname = os.path.join(options.veins_ris, 'print-veins_ris-version')
+    expect_version = ['1.0']
+    try:
+        print 'Running "%s" to determine Veins RIS version.' % fname
+        version = subprocess.check_output(['env', fname]).strip()
+        if not version in expect_version:
+            print ''
+            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+            warning('Unsupported Veins RIS Version. Expecting %s, found "%s"' % (' or '.join(expect_version), version))
+            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+            print ''
+        else:
+            print 'Found Veins RIS version "%s". Okay.' % version
+    except subprocess.CalledProcessError as e:
+        error('Could not determine Veins RIS Version (by running %s): %s. Check the path to Veins RIS (--with-veins-ris=... option) and the Veins RIS version (should be version %s)' % (fname, e, ' or '.join(expect_version)))
+        sys.exit(1)
+
+    veins_ris_header_dirs = [os.path.join(os.path.relpath(options.veins_ris, 'src'), 'src')]
+    veins_ris_includes = ['-I' + s for s in veins_ris_header_dirs]
+    veins_ris_link = ["-L" + os.path.join(os.path.relpath(options.veins_ris, 'src'), 'src'), "-lveins-ris$(D)"]
+    veins_ris_defs = []
+
+    makemake_flags += veins_ris_includes + veins_ris_link + veins_ris_defs
+    run_lib_paths = [os.path.relpath(os.path.join(options.veins_ris, 'src'))] + run_lib_paths
 
 
 # Add flags for Veins
 if options.veins:
     fname = os.path.join(options.veins, 'print-veins-version')
-    expect_version = ['5.0', '5.1', '5.2']
+    expect_version = ['5.2']
     try:
         print 'Running "%s" to determine Veins version.' % fname
         version = subprocess.check_output(['env', fname]).strip()
@@ -82,9 +104,7 @@ if options.veins:
     veins_defs = []
 
     makemake_flags += veins_includes + veins_link + veins_defs
-    run_libs = [os.path.relpath(os.path.join(options.veins, 'src', 'veins'))] + run_libs
-    run_neds = [os.path.relpath(os.path.join(options.veins, 'src', 'veins'))] + run_neds
-    run_imgs = [os.path.relpath(os.path.join(options.veins, 'images'))] + run_imgs
+    run_lib_paths = [os.path.relpath(os.path.join(options.veins, 'src'))] + run_lib_paths
 
 
 # Start creating files
@@ -92,9 +112,7 @@ if not os.path.isdir('out'):
     os.mkdir('out')
 
 f = open(os.path.join('out', 'config.py'), 'w')
-f.write('run_libs = %s\n' % repr(run_libs))
-f.write('run_neds = %s\n' % repr(run_neds))
-f.write('run_imgs = %s\n' % repr(run_imgs))
+f.write('run_lib_paths = %s\n' % repr(run_lib_paths))
 f.close()
 
 subprocess.check_call(['env', 'opp_makemake'] + makemake_flags, cwd='src')

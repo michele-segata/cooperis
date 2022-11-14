@@ -1,7 +1,6 @@
-#!/bin/bash
 
 #
-# Copyright (C) 2019 Julian Heinovski <heinovski@ccs-labs.org>
+# Copyright (C) 2018 Christoph Sommer <sommer@ccs-labs.org>
 #
 # Documentation for these modules is at http://veins.car2x.org/
 #
@@ -22,18 +21,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-# Generates the version number used for the doxygen documentation
-# by using git describe to analyze the current HEAD of the repository.
-#
-# Example: veins-ris-5a1-16-gd81b4a14a0
-# The current HEAD points at the commit d81b4a14a0, which is 16 commits
-# newer than the tag veins-ris-5a1 it is based on.
-#
-# In case git describe fails, the version is empty.
+all: veins_ris_catch$(D)
 
-TAG=$(git describe --tags --always 2> /dev/null)
-if [[ ($? -eq 0) && ($TAG =~ ^veins-ris-) ]]; then
-    echo $TAG | sed -n 's/^veins-ris-\(.*\)$/\1/p'
-else
-    echo ""
-fi
+veins_ris_catch$(D): $(O)/veins_ris_catch$(D)
+	$(qecho) "Creating symlink: $@"
+	$(Q)$(LN) $(O)/veins_ris_catch$(D) .
+
+$(O)/veins_ris_catch$(D): $(OBJS) $(O)/$(TARGET)
+	$(qecho) "Creating binary: $@"
+	$(Q)$(CXX) -o $@ $(OBJS) $(LIBS) $(OMNETPP_LIBS) $(LDFLAGS) -L$(O)
+
+cleanbin:
+	$(Q)-rm -f $(O)/veins_ris_catch$(D)
+	$(Q)-rm -f veins_ris_catch$(D)

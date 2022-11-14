@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <buildspec version="4.0">
     <dir path="." type="custom"/>
-    <dir makemake-options="--make-so --deep -o veins-rms -O out -pVEINS_RMS -I. --meta:export-include-path --meta:use-exported-include-paths --meta:export-library --meta:use-exported-libs --meta:feature-cflags --meta:feature-ldflags" path="src" type="makemake"/>
+    <dir makemake-options="--make-so --deep -o veins-ris -O out -pVEINS_RIS -I. --meta:export-include-path --meta:use-exported-include-paths --meta:export-library --meta:use-exported-libs --meta:feature-cflags --meta:feature-ldflags" path="src" type="makemake"/>
 </buildspec>

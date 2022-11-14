@@ -60,7 +60,7 @@ module Scenario
             parameters:
                 @display("p=146,31;i=abstract/multicast");
         }
-        rmsConnectionManager: ConnectionManager { // for RMS
+        risConnectionManager: ConnectionManager { // for RIS
             parameters:
                 @display("p=146,112;i=abstract/multicast");
         }

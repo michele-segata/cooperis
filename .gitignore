@@ -18,11 +18,11 @@ examples/**/.qtenvrc
 examples/**/.cmdenv-log
 examples/**/valgrind.out
 
-subprojects/veins_rms_catch/out
-subprojects/veins_rms_catch/run
-subprojects/veins_rms_catch/src/*.dll
-subprojects/veins_rms_catch/src/*.dylib
-subprojects/veins_rms_catch/src/*.so
-subprojects/veins_rms_catch/src/Makefile
-subprojects/veins_rms_catch/src/veins_rms_catch
-subprojects/veins_rms_catch/src/veins_rms_catch_dbg
+subprojects/veins_ris_catch/out
+subprojects/veins_ris_catch/run
+subprojects/veins_ris_catch/src/*.dll
+subprojects/veins_ris_catch/src/*.dylib
+subprojects/veins_ris_catch/src/*.so
+subprojects/veins_ris_catch/src/Makefile
+subprojects/veins_ris_catch/src/veins_ris_catch
+subprojects/veins_ris_catch/src/veins_ris_catch_dbg
