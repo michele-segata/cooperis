@@ -1,8 +1,5 @@
 //
-// Copyright (C) 2004 Telecommunication Networks Group (TKN) at Technische Universitaet Berlin, Germany.
-// Copyright (C) 2005 Andras Varga
-//
-// Documentation for these modules is at http://veins.car2x.org/
+// Copyright (C) 2022 Michele Segata <segata@ccs-labs.org>
 //
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
@@ -20,9 +17,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-
-// author:      Daniel Willkomm, Andras Varga
-// part of:     framework implementation developed by tkn
+// Base files derived from Veins VLC by Agon Memedi and contributors
 
 #pragma once
 

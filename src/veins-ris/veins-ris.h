@@ -1,7 +1,5 @@
 //
-// Copyright (C) 2019 Agon Memedi <memedi@ccs-labs.org>
-//
-// Documentation for these modules is at http://veins.car2x.org/
+// Copyright (C) 2022 Michele Segata <segata@ccs-labs.org>
 //
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
@@ -19,6 +17,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+// Base files derived from Veins VLC by Agon Memedi and contributors
 
 #pragma once
 
