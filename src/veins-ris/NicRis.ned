@@ -26,13 +26,13 @@ import org.car2x.veinsris.PhyLayerRis;
 
 module NicRis
 {
-	parameters:
-	    
-	    bool isRis;
-	    // Explicitly specify the Connection Manager for this type of NIC
+    parameters:
+
+        bool isRis;
+        // Explicitly specify the Connection Manager for this type of NIC
         // If not specified, MiXiM defaults to the BaseConnectionManager
         string connectionManagerName = default("risConnectionManager");
-	    
+
     gates:
         input radioIn; // radioIn gate for sendDirect
         
@@ -47,8 +47,8 @@ module NicRis
         macRis: MacLayerRis if !isRis {
             @display("p=69,82");
         }
-		
-		// the reflective metasurface only has a phy layer.
+
+        // the reflective metasurface only has a phy layer.
         // in fact, there is not even a real phy layer, as it does only reflect a signal and it adds metadata to it
         phyRis: PhyLayerRis {
             parameters:
@@ -58,19 +58,19 @@ module NicRis
 
     connections allowunconnected:
         radioIn --> phyRis.radioIn;
-        
+
         // Bottom up
         phyRis.upperLayerOut --> macRis.lowerLayerIn if !isRis;
         macRis.upperLayerOut --> upperLayerOut if !isRis;
         // Top down
         upperLayerIn --> macRis.upperLayerIn if !isRis;
         macRis.lowerLayerOut --> phyRis.upperLayerIn if !isRis;
-        
+
         // Bottom up Control
         phyRis.upperControlOut --> macRis.lowerControlIn if !isRis;
         macRis.upperControlOut --> upperControlOut if !isRis;
         // Top down Control
         upperControlIn --> macRis.upperControlIn if !isRis;
         macRis.lowerControlOut --> phyRis.upperControlIn if !isRis;
-        
+
 }

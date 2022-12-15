@@ -25,11 +25,6 @@ import veins.base.utils.Coord;
 
 namespace veins;
 
-//enum AirFrameRisSource {
-//	FROM_UE = 0;
-//	FROM_RIS = 1;
-//};
-
 message AirFrameRis extends veins::AirFrame {
     // coordinates describing the orientation of the source RIS (if it is a RIS)
     Coord ris_v1;
