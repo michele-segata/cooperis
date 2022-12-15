@@ -73,6 +73,11 @@ void PhyLayerRis::initialize(int stage)
             // compute facing direction
             ris_vn = cross(ris_v2, ris_v1);
 
+            initialIncidencePhi = par("initialIncidencePhi");
+            initialIncidenceTheta = par("initialIncidenceTheta");
+            initialReflectionPhi = par("initialReflectionPhi");
+            initialReflectionTheta = par("initialReflectionTheta");
+
             initMetasurface = new cMessage("initMetasurface");
             scheduleAt(simTime() + 1e-6, initMetasurface);
 
@@ -84,6 +89,10 @@ void PhyLayerRis::initialize(int stage)
 
         ignoreNonReflectedSignals = par("ignoreNonReflectedSignals");
         ignoreNoiseAndInterference = par("ignoreNoiseAndInterference");
+
+        useProductOfDistances = par("useProductOfDistances");
+
+        repropagationThreshold_mW = par("repropagationThreshold");
 
         // Create frequency mappings and initialize spectrum for signal representation
         overallSpectrum = Spectrum({centerFrequency});
@@ -115,11 +124,6 @@ double PhyLayerRis::getMetasurfaceGain(double phiR_rad, double thetaR_rad, doubl
     double configPhiR_rad, configPhiI_rad, configThetaR_rad, configThetaI_rad;
     ris->getConfiguration(configPhiR_rad, configThetaR_rad, configPhiI_rad, configThetaI_rad);
     double gain = ris->gain(phiR_rad, thetaR_rad, phiI_rad, thetaI_rad);
-
-//    printf("RIS config for phiR=%.2f, thetaR=%.2f, phiI=%.2f, thetaI=%.2f\n", RAD_TO_DEG(configPhiR_rad), RAD_TO_DEG(configThetaR_rad), RAD_TO_DEG(configPhiI_rad), RAD_TO_DEG(configThetaI_rad));
-//    printf("Req. gain  for phiR=%.2f, thetaR=%.2f, phiI=%.2f, thetaI=%.2f\n", RAD_TO_DEG(phiR_rad), RAD_TO_DEG(thetaR_rad), RAD_TO_DEG(phiI_rad), RAD_TO_DEG(thetaI_rad));
-//    printf("Gain: %.2f (%.2f dB)\n", gain, 10 * log10(gain));
-
     return gain;
 }
 
@@ -216,7 +220,7 @@ unique_ptr<AnalogueModel> PhyLayerRis::initializeSimplePathlossModelRis(Paramete
         }
     }
 
-    return make_unique<SimplePathlossModelRis>(this, alpha, useTorus, playgroundSize);
+    return make_unique<SimplePathlossModelRis>(this, alpha, useTorus, useProductOfDistances, playgroundSize);
 }
 
 unique_ptr<Decider> PhyLayerRis::getDeciderFromName(std::string name, ParameterMap& params)
@@ -273,12 +277,7 @@ void PhyLayerRis::handleSelfMessage(cMessage* msg)
     }
 
     if (msg == initMetasurface) {
-        double phiR = DEG_TO_RAD(-84.2719);
-        double thetaR = DEG_TO_RAD(85.3535);
-        double phiI = DEG_TO_RAD(11.1671);
-        double thetaI = DEG_TO_RAD(4.74773);
-        configureMetaSurface(phiR, thetaR, phiI, thetaI);
-//        configureMetaSurface(RIS_AZIMUTH_CENTER, RIS_ELEVATION_MIDDLE, RIS_AZIMUTH_CENTER, RIS_ELEVATION_MIDDLE);
+        configureMetaSurface(initialReflectionPhi, initialReflectionTheta, initialIncidencePhi, initialIncidenceTheta);
         cancelAndDelete(initMetasurface);
         initMetasurface = nullptr;
     }
@@ -357,7 +356,11 @@ unique_ptr<AirFrame> PhyLayerRis::encapsMsg(cPacket* macPkt, double txPower, dou
     frame->setIncidencePhi(incidencePhi);
     frame->setIncidenceTheta(incidenceTheta);
     frame->setReflected(reflected);
-    frame->setOriginalId(originalId);
+    if (originalId >= 0)
+        frame->setOriginalId(originalId);
+    else
+        // set the original id of a new frame to its id, otherwise RIS will not repropagate it (ID 0 already seen!)
+        frame->setOriginalId(frame->getId());
     frame->setOriginalSenderModule(this);
 
     if (isRIS) {
@@ -367,6 +370,7 @@ unique_ptr<AirFrame> PhyLayerRis::encapsMsg(cPacket* macPkt, double txPower, dou
     }
     else {
         frame->setTotalDistance(0);
+        frame->setPathsArraySize(0);
     }
 
     // encapsulate the mac packet into the phy frame
@@ -459,42 +463,64 @@ void PhyLayerRis::filterSignal(AirFrame* frame)
     }
 
     if (isRIS) {
-        // if this is an RIS, we should repropagate, but we need to attach metadata first
-        Angles incident = spherical_angles(getRis_v1(), getRis_v2(), getRis_vn(), receiverPosition.getPositionAt(), senderPosition.getPositionAt());
-        double recvPower_dBm = 10 * log10(signal.getAtCenterFrequency());
 
-        EV_TRACE << "RIS: AirFrame to repropagate. Power: " << recvPower_dBm << "\n";
-        Coord senderCoord = senderPOA.pos.getPositionAt();
-        EV_TRACE << "Frame coming from " << senderCoord.x << " " << senderCoord.y << " " << senderCoord.z << "\n";
-
-        // TODO: set threshold parameter
-        if (recvPower_dBm > -100) {
-
-            unique_ptr<AirFrame> toRepropagate = encapsMsg(frame->getEncapsulatedPacket()->dup(), signal.getAtCenterFrequency(), incident.phi, incident.theta, true, frame->getId());
-
-            AirFrameRis* frameToRepropagate = dynamic_cast<AirFrameRis*>(toRepropagate.get());
-            frameToRepropagate->setOriginalSenderModule(frameRis->getOriginalSenderModule());
-            frameToRepropagate->setRisGain(frameRis->getRisGain());
-            frameToRepropagate->setReflected(true);
-            frameToRepropagate->setTotalDistance(frameRis->getTotalDistance());
-
-            // Prepare a POA object and attach it to the created Airframe
-            AntennaPosition pos = antennaPosition;
-            Coord orient = antennaHeading.toCoord();
-            toRepropagate->setPoa({pos, orient, antenna});
-
-            // TODO: might need to completely re-think the physical layer
-            // TODO: RIS is passive so there is no notion of TX/RX status
-            // make sure there is no self message of kind TX_OVER scheduled
-            // and schedule the actual one
-            ASSERT(!txOverTimer->isScheduled());
-            sendSelfMessage(txOverTimer, simTime() + toRepropagate->getDuration());
-
-            sendMessageDown(toRepropagate.release());
-
+        // THIS IS NOT ENOUGH: YOU NEED A MAP INDICATING FRAME ID AND PREVIOUS HOP. OTHERWISE YOU'RE NOT REPROPAGATING BECAUSE
+        // 1) YOU GET IT FROM THE NODE (SAVE ID)
+        // 2) WHEN YOU GET IT REFLECTED FROM A RIS YOU DON'T REFLECT IT (ALREADY RECEIVED AND REFLECTED)
+        EV_TRACE << "RIS: checking whether AirFrame " << frameRis->getOriginalId() << " from module " << frameRis->getSenderModuleId() << " should be reflected\n";
+        if (repropagatedFrames.find(pair<int, int>(frameRis->getOriginalId(), frameRis->getSenderModuleId())) != repropagatedFrames.end()) {
+            EV_TRACE << "RIS: AirFrame " << frameRis->getOriginalId() << " already repropagated\n";
         }
         else {
-            EV_TRACE << "Signal too low. RIS won't repropagate the signal\n";
+            EV_TRACE << "RIS: AirFrame " << frameRis->getOriginalId() << " should be repropagated\n";
+            // if this is an RIS, we should repropagate, but we need to attach metadata first
+            Angles incident = spherical_angles(getRis_v1(), getRis_v2(), getRis_vn(), receiverPosition.getPositionAt(), senderPosition.getPositionAt());
+            double recvPower_mW = signal.getAtCenterFrequency();
+
+            EV_TRACE << "RIS: AirFrame to repropagate. Power: " << 10*log10(recvPower_mW) << "\n";
+            Coord senderCoord = senderPOA.pos.getPositionAt();
+            EV_TRACE << "Frame coming from " << senderCoord.x << " " << senderCoord.y << " " << senderCoord.z << "\n";
+
+
+            EV_TRACE << "recv mw = " << recvPower_mW << "\n";
+            EV_TRACE << "threshold mw = " << repropagationThreshold_mW << "\n";
+            // TODO: set threshold parameter
+            if (recvPower_mW > repropagationThreshold_mW) {
+
+                unique_ptr<AirFrame> toRepropagate = encapsMsg(frame->getEncapsulatedPacket()->dup(), signal.getAtCenterFrequency(), incident.phi, incident.theta, true, frameRis->getOriginalId());
+
+                AirFrameRis* frameToRepropagate = dynamic_cast<AirFrameRis*>(toRepropagate.get());
+                frameToRepropagate->setOriginalSenderModule(frameRis->getOriginalSenderModule());
+
+                frameToRepropagate->setRisGainsArraySize(frameRis->getRisGainsArraySize());
+                for (int i = 0; i < frameRis->getRisGainsArraySize(); i++)
+                    frameToRepropagate->setRisGains(i, frameRis->getRisGains(i));
+
+                frameToRepropagate->setPathsArraySize(frameRis->getPathsArraySize());
+                for (int i = 0; i < frameRis->getPathsArraySize(); i++)
+                    frameToRepropagate->setPaths(i, frameRis->getPaths(i));
+
+                frameToRepropagate->setLoss_dBArraySize(frameRis->getLoss_dBArraySize());
+                for (int i = 0; i < frameRis->getLoss_dBArraySize(); i++)
+                    frameToRepropagate->setLoss_dB(i, frameRis->getLoss_dB(i));
+
+                frameToRepropagate->setReflected(true);
+                frameToRepropagate->setTotalDistance(frameRis->getTotalDistance());
+
+                // Prepare a POA object and attach it to the created Airframe
+                AntennaPosition pos = antennaPosition;
+                Coord orient = antennaHeading.toCoord();
+                toRepropagate->setPoa({pos, orient, antenna});
+
+                sendMessageDown(toRepropagate.release());
+
+                repropagatedFrames.insert(pair<int, int>(frameRis->getOriginalId(), frameRis->getSenderModuleId()));
+
+            }
+            else {
+                EV_TRACE << "Signal too low. RIS won't repropagate the signal\n";
+            }
+
         }
     }
 

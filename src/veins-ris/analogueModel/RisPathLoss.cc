@@ -49,7 +49,7 @@ void RisPathLoss::filterSignal(Signal* signal, AirFrame* frame)
         EV_TRACE << phyLayer->getFullPath() << " incoming signal from " << senderPos.x << " " << senderPos.y << " " << senderPos.z << "\n";
         EV_TRACE << phyLayer->getFullPath() << " Received signal from RIS. Incidence phi=" << RAD_TO_DEG(risMsg->getIncidencePhi()) << " theta=" << RAD_TO_DEG(risMsg->getIncidenceTheta()) << " Reflection phi=" << RAD_TO_DEG(reflection.phi) << " theta=" << RAD_TO_DEG(reflection.theta) << "\n";
         double gain = source->getMetasurfaceGain(reflection.phi, reflection.theta, risMsg->getIncidencePhi(), risMsg->getIncidenceTheta());
-        risMsg->setRisGain(gain);
+        risMsg->appendRisGains(gain);
         risMsg->setReflectionPhi(reflection.phi);
         risMsg->setReflectionTheta(reflection.theta);
         EV_TRACE << "Applying a gain of " << gain << "(" << (10*log10(gain)) << " dB) to the incoming signal\n";

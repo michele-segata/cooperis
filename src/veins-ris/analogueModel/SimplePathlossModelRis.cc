@@ -44,13 +44,14 @@ void SimplePathlossModelRis::filterSignal(Signal* signal, AirFrame* frame)
     double sqrDistance = useTorus ? receiverPos.sqrTorusDist(senderPos, playgroundSize) : receiverPos.sqrdist(senderPos);
     double distance = std::sqrt(sqrDistance);
 
-    frameRis->setTotalDistance(frameRis->getTotalDistance() + distance);
+    // save the length of the current path
+    frameRis->appendPaths(distance);
+
+    double totalDistance = frameRis->getTotalDistance() + distance;
 
     // we do not apply path loss at the metasurface, only at the final receiver
-    if (receiver->isReflectiveMetaSurface())
-        return;
-
-    sqrDistance = std::pow(frameRis->getTotalDistance(), 2);
+    //    if (receiver->isReflectiveMetaSurface())
+    //        return;
 
     EV_TRACE << "sqrdistance is: " << sqrDistance << endl;
 
@@ -59,15 +60,32 @@ void SimplePathlossModelRis::filterSignal(Signal* signal, AirFrame* frame)
         return;
     }
 
-    // the part of the attenuation only depending on the distance
-    double distFactor = pow(sqrDistance, -pathLossAlphaHalf) / (16.0 * M_PI * M_PI);
-    EV_TRACE << "distance factor is: " << distFactor << endl;
-
     Signal attenuation(signal->getSpectrum());
-    for (uint16_t i = 0; i < signal->getNumValues(); i++) {
-        double wavelength = BaseWorldUtility::speedOfLight() / signal->getSpectrum().freqAt(i);
-        attenuation.at(i) = (wavelength * wavelength) * distFactor;
+
+    if (useProductOfDistances || frameRis->getPathsArraySize() == 1) {
+        // using far field model, simply compute the path loss independently
+        // the part of the attenuation only depending on the distance
+        double distFactor = pow(sqrDistance, -pathLossAlphaHalf) / (16.0 * M_PI * M_PI);
+        EV_TRACE << "distance factor is: " << distFactor << endl;
+        for (uint16_t i = 0; i < signal->getNumValues(); i++) {
+            double wavelength = BaseWorldUtility::speedOfLight() / signal->getSpectrum().freqAt(i);
+            double att = (wavelength * wavelength) * distFactor;
+            attenuation.at(i) = att;
+            if (i == 0)
+                frameRis->appendLoss_dB(10*log10(att));
+        }
     }
+    else {
+        double additionalPathFactor = pow(frameRis->getTotalDistance() / totalDistance, pathLossAlpha);
+        for (uint16_t i = 0; i < signal->getNumValues(); i++) {
+            attenuation.at(i) = additionalPathFactor;
+            if (i == 0)
+                frameRis->appendLoss_dB(10*log10(additionalPathFactor));
+        }
+    }
+
+    // save the total length travelled
+    frameRis->setTotalDistance(totalDistance);
     *signal *= attenuation;
 
 }

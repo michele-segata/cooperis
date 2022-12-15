@@ -22,14 +22,103 @@
 #pragma once
 
 #include <cmath>
+#include <list>
+#include <string>
+#include <sstream>
 
-#include <omnetpp.h>
+using namespace std;
+
+#ifndef STANDALONE
 
 #include <veins/base/utils/Coord.h>
-
 namespace veins {
 
-using namespace omnetpp;
+#else
+
+class Coord {
+public:
+    double x;
+    double y;
+    double z;
+    Coord()
+        : x(0)
+        , y(0)
+        , z(0) {}
+    Coord(const Coord& p)
+        : x(p.x)
+        , y(p.y)
+        , z(p.z) {}
+    Coord(double x, double y, double z)
+        : x(x)
+        , y(y)
+        , z(z) {}
+    friend Coord operator*(const Coord& a, double v)
+    {
+        Coord n(a);
+        n *= v;
+        return n;
+    }
+    Coord& operator+=(const Coord& a)
+    {
+        x += a.x;
+        y += a.y;
+        z += a.z;
+        return *this;
+    }
+    Coord& operator-=(const Coord& a)
+    {
+        x -= a.x;
+        y -= a.y;
+        z -= a.z;
+        return *this;
+    }
+    friend Coord operator+(const Coord& a, const Coord& b)
+    {
+        Coord tmp(a);
+        tmp += b;
+        return tmp;
+    }
+    friend Coord operator-(const Coord& a, const Coord& b)
+    {
+        Coord tmp(a);
+        tmp -= b;
+        return tmp;
+    }
+    Coord inverse() const
+    {
+        Coord tmp;
+        tmp.x = -x;
+        tmp.y = -y;
+        tmp.z = -z;
+        return tmp;
+    }
+    Coord& operator*=(double v)
+    {
+        x *= v;
+        y *= v;
+        z *= v;
+        return *this;
+    }
+    double length()
+    {
+        return sqrt(x*x + y*y + z*z);
+    }
+    void normalize()
+    {
+        double l = length();
+        x /= l;
+        y /= l;
+        z /= l;
+    }
+    string toString() const
+    {
+        stringstream ss;
+        ss << "x=" << x << " y=" << y << " z=" << z;
+        return ss.str();
+    }
+}; // namespace veins
+
+#endif
 
 struct Angles {
     // azimuth angle (in radians)
@@ -52,7 +141,7 @@ struct Angles {
  * @return an Angles structure with the theta and phi angles between the node and the RIS
  */
 
-//Angles get_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node, bool rightHanded=false);
+// Angles get_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node, bool rightHanded=false);
 
 Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node);
 
@@ -114,6 +203,8 @@ double plane_vector_intersection(const Coord& planeN, const Coord& risPos, const
  * @param groundHeight height of the ground
  * @return the two points to be used for projection
  */
-std::list<Coord> project_beam(const Coord& v1, const Coord& v2, const Coord& vn, const Coord& risPos, double phi, double theta, double groundHeight=0);
+std::list<Coord> project_beam(const Coord& v1, const Coord& v2, const Coord& vn, const Coord& risPos, double phi, double theta, double groundHeight= 0);
 
+#ifndef STANDALONE
 } // namespace veins
+#endif

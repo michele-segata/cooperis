@@ -36,19 +36,26 @@ message AirFrameRis extends veins::AirFrame {
     Coord ris_v2;
     Coord ris_vn;
     const cModule* originalSenderModule;
-    // TODO: transform this into an array
-    double risGain;
+    // list of gains applied by RISs on the path
+    double risGains[];
     // total distance travelled, to compute path loss at the end of the path
+    double paths[];
+    // loss on each path (free space only)
+    double loss_dB[];
     double totalDistance;
-    
+    // path loss accumulated so far.
+    // this can be used to compute the additional pathloss on the new leg of the path,
+    // when using the sum of paths
+    double currentPathLoss_dB;
+
     // should the frame be coming reflected by a RIS, the frame will need to
     // include the incidence angle (original transmitter -> RIS)
     double incidencePhi;
     double incidenceTheta;
-    
-	double reflectionPhi;
+
+    double reflectionPhi;
     double reflectionTheta;
-    
+
     bool reflected;
     int originalId;
 }

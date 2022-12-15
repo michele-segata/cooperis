@@ -28,13 +28,13 @@ simple PhyLayerRis extends BasePhyLayer
     parameters:
         @class(veins::PhyLayerRis);
 
-		// available rates are 120, 180, 240, 360, 480, 720, 960, 1080 Mbps
+        // available rates are 120, 180, 240, 360, 480, 720, 960, 1080 Mbps
         int bitrate @unit(bps);
-        
+
         double centerFrequency @unit(Hz);
-        
+
         double txPower @unit(mW);
-        
+
         // determine whether this node is an RIS or a UE
         bool isRIS;
         // just for graphically drawing the beams from the RIS
@@ -61,10 +61,22 @@ simple PhyLayerRis extends BasePhyLayer
         double ris_v1_x = default(0);
         double ris_v1_y = default(0);
         double ris_v1_z = default(0);
-        
+
+        // configure RIS on startup
+        double initialIncidencePhi @unit(rad) = default(0rad);
+        double initialIncidenceTheta @unit(rad) = default(0rad);
+        double initialReflectionPhi @unit(rad) = default(0rad);
+        double initialReflectionTheta @unit(rad) = default(0rad);
+
         // whether to ignore non reflected frame on reception (capture effect, as non reflected signal comes in first)
         bool ignoreNonReflectedSignals = default(false);
         // whether to receive every packet regardless of noise and interference
         bool ignoreNoiseAndInterference = default(false);
+
+        // whether to use sum or product of distances (near field vs far field) in the free space path loss model
+        bool useProductOfDistances = default(false);
+
+        // power below which a RIS will not reflect a signal (for optimization)
+        double repropagationThreshold @unit(mW) = default(-100dBm);
 
 }

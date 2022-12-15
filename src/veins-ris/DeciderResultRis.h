@@ -30,7 +30,7 @@ namespace veins {
 class VEINS_API DeciderResultRis : public DeciderResult80211 {
 protected:
     /** @brief Stores the gain applied by the ris TODO: transform this into an array */
-    double gain;
+    std::vector<double> gains;
     double phiR, thetaR, phiI, thetaI;
     bool reflected;
 
@@ -40,9 +40,9 @@ public:
      *
      * "bitrate" defines the bit-rate of the transmission of the packet.
      */
-    DeciderResultRis(bool isCorrect, double bitrate, double snr, double recvPower_dBm = 0, bool collision = false, double gain=0, double phiR=0, double thetaR=0, double phiI=0, double thetaI=0, bool reflected=false)
+    DeciderResultRis(bool isCorrect, double bitrate, double snr, double recvPower_dBm = 0, bool collision = false, std::vector<double> gains = std::vector<double>(), double phiR= 0, double thetaR= 0, double phiI= 0, double thetaI= 0, bool reflected= false)
         : DeciderResult80211(isCorrect, bitrate, snr, recvPower_dBm, collision)
-        , gain(gain)
+        , gains(gains)
         , phiR(phiR)
         , thetaR(thetaR)
         , phiI(phiI)
@@ -51,9 +51,9 @@ public:
     {
     }
 
-    double getGain() const
+    std::vector<double> getGains() const
     {
-        return gain;
+        return gains;
     }
 
     double getPhiR() const

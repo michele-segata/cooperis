@@ -95,6 +95,11 @@ protected:
     // compute as the cross product between v2 and v1
     Coord ris_vn;
 
+    double initialIncidencePhi = 0;
+    double initialIncidenceTheta = 0;
+    double initialReflectionPhi = 0;
+    double initialReflectionTheta = 0;
+
     ReconfigurableIntelligentSurface* ris = nullptr;
 
     AnnotationManager* annotations = nullptr;
@@ -107,6 +112,13 @@ protected:
 
     bool ignoreNonReflectedSignals = false;
     bool ignoreNoiseAndInterference = false;
+
+    bool useProductOfDistances = false;
+
+    double repropagationThreshold_mW = 10e-10;
+
+    // keeps track of the frames that have been reflected and senders, to avoid reflecting them twice
+    std::set<pair<int, int>> repropagatedFrames;
 
     // map from vehicle id to their coordinates, to enable reconfiguration of the RIS
     std::map<int, Coord> vehicles;
@@ -165,7 +177,7 @@ protected:
      * AirFrame and sets all necessary attributes.
      */
     virtual std::unique_ptr<AirFrame> encapsMsg(cPacket* msg) override;
-    virtual std::unique_ptr<AirFrame> encapsMsg(cPacket* macPkt, double txPower, double incidencePhi= 0, double incidenceTheta= 0, bool reflected= false, int originalId= 0);
+    virtual std::unique_ptr<AirFrame> encapsMsg(cPacket* macPkt, double txPower, double incidencePhi= 0, double incidenceTheta= 0, bool reflected= false, int originalId= -1);
 
     virtual void handleAirFrameReceiving(AirFrame* msg) override;
 

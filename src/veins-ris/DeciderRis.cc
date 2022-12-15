@@ -43,6 +43,29 @@ simtime_t DeciderRis::processNewSignal(AirFrame* msg)
     Signal& signal = frame->getSignal();
     double recvPower = signal.getAtCenterFrequency();
 
+    EV_TRACE << "DeciderRis: incoming frame with id " << frame->getOriginalId() << " with power " << (10*log10(recvPower)) << "\n";
+    EV_TRACE << "Number of reflections: " << (frame->getPathsArraySize() - 1) << " total distance: " << frame->getTotalDistance() << "\n";
+    stringstream ss;
+    ss << "Paths: [";
+    for (int i = 0; i < frame->getPathsArraySize(); i++)
+        ss << frame->getPaths(i) << ", ";
+    ss << "]\n";
+    EV_TRACE << ss.str();
+    ss.str(std::string());
+
+    ss << "RIS Gains: [";
+    for (int i = 0; i < frame->getRisGainsArraySize(); i++)
+        ss << (10*log10(frame->getRisGains(i))) << " dB, ";
+    ss << "]\n";
+    EV_TRACE << ss.str();
+    ss.str(std::string());
+
+    ss << "Loss on paths: [";
+    for (int i = 0; i < frame->getLoss_dBArraySize(); i++)
+        ss << frame->getLoss_dB(i) << " dB, ";
+    ss << "]\n";
+    EV_TRACE << ss.str();
+
     if (!frame->getReflected() && ignoreNonReflectedSignals) {
         EV_TRACE << "Ignoring non reflected signal\n";
         return signal.getReceptionEnd();
@@ -126,9 +149,14 @@ DeciderResult* DeciderRis::checkIfSignalOk(AirFrame* frame)
 
     EV_TRACE << "Packet SINR: " << 10*log10(sinrMin) << "\n";
 
+    std::vector<double> gains;
+    gains.reserve(frameRis->getRisGainsArraySize());
+    for (int i = 0; i < frameRis->getRisGainsArraySize(); i++)
+        gains.push_back(frameRis->getRisGains(i));
+
     if (ignoreNoiseAndInterference) {
         EV_TRACE << "Ignoring noise and interference. Packet is fine! We can decode it" << std::endl;
-        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, frameRis->getRisGain(), frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
         return result;
     }
 
@@ -136,7 +164,7 @@ DeciderResult* DeciderRis::checkIfSignalOk(AirFrame* frame)
 
     case DECODED:
         EV_TRACE << "Packet is fine! We can decode it" << std::endl;
-        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, frameRis->getRisGain(), frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
         break;
 
     case NOT_DECODED:
@@ -146,13 +174,13 @@ DeciderResult* DeciderRis::checkIfSignalOk(AirFrame* frame)
         else {
             EV_TRACE << "Packet has bit Errors due to low power. Lost " << std::endl;
         }
-        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, false, frameRis->getRisGain(), frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, false, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
         break;
 
     case COLLISION:
         EV_TRACE << "Packet has bit Errors due to collision. Lost " << std::endl;
         collisions++;
-        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, true, frameRis->getRisGain(), frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, true, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
         break;
 
     default:

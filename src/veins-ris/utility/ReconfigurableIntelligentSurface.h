@@ -114,7 +114,7 @@ private:
 
 
 public:
-    ReconfigurableIntelligentSurface(double frequency, int n= 2);
+    ReconfigurableIntelligentSurface(double frequency, int n=2);
     virtual ~ReconfigurableIntelligentSurface();
 
     /**

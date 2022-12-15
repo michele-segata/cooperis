@@ -55,13 +55,17 @@ class VEINS_API SimplePathlossModelRis : public SimplePathlossModel, public Fram
 protected:
 
     PhyLayerRis* receiver = nullptr;
+    bool useProductOfDistances;
+    double pathLossAlpha = 2;
 
 public:
 
-    SimplePathlossModelRis(cComponent* owner, double alpha, bool useTorus, const Coord& playgroundSize)
+    SimplePathlossModelRis(cComponent* owner, double alpha, bool useTorus, bool useProductOfDistances, const Coord& playgroundSize)
         : SimplePathlossModel(owner, alpha, useTorus, playgroundSize)
     {
         receiver = check_and_cast<PhyLayerRis*>(owner);
+        pathLossAlpha = alpha;
+        this->useProductOfDistances = useProductOfDistances;
     }
 
     /**

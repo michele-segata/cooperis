@@ -22,7 +22,7 @@
 #include "veins/base/utils/Coord.h"
 #include "RisTest.h"
 
-#define PAIR(x,y) std::pair<int,int>(x,y)
+#define PAIR(x, y) std::pair<int, int>(x, y)
 
 using namespace veins;
 SCENARIO("RisTestCases", "[risTestCases]")

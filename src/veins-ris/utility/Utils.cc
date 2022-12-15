@@ -19,15 +19,24 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include "veins-ris/utility/Utils.h"
+#ifndef STANDALONE
+
 #include "veins/base/utils/Coord.h"
+#include "veins-ris/utility/Utils.h"
 
 using namespace veins;
 
 namespace veins {
 
-//Angles get_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node, bool rightHanded)
-//{
+#else
+
+#include "Utils.h"
+
+#endif
+
+
+// Angles get_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node, bool rightHanded)
+// {
 //
 //    Angles angles;
 //
@@ -51,9 +60,10 @@ namespace veins {
 //
 //    return angles;
 //
-//}
+// }
 
-Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node) {
+Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node)
+{
 
     Angles angles;
 
@@ -139,7 +149,11 @@ std::list<Coord> project_beam(const Coord& v1, const Coord& v2, const Coord& vn,
     static Coord groundPoint(1, 1, groundHeight);
     Coord beamDir = spherical_point_beam(v1, v2, vn, risPos, phi, theta);
 
-    Coord groundIntersection = beamDir * plane_vector_intersection(groundN, risPos, groundPoint, beamDir) + risPos;
+    double beamLength = plane_vector_intersection(groundN, risPos, groundPoint, beamDir);
+    // if the beam is parallel to the ground (no intersection) simply draw a very long beam
+    if (beamLength < 1e-9)
+        beamLength = 1e6;
+    Coord groundIntersection = beamDir * beamLength + risPos;
     Coord risGroundPos(risPos);
     risGroundPos.z = groundHeight;
     std::list<Coord> beam;
@@ -148,4 +162,6 @@ std::list<Coord> project_beam(const Coord& v1, const Coord& v2, const Coord& vn,
     return beam;
 }
 
+#ifndef STANDALONE
 } // namespace veins
+#endif

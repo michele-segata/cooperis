@@ -21,6 +21,8 @@
 
 #include "veins-ris/SUMOBaseMobility.h"
 #include "veins/base/utils/FindModule.h"
+#include <sstream>
+using namespace std;
 
 using namespace veins;
 
@@ -81,7 +83,9 @@ void SUMOBaseMobility::initializePosition()
     coords.push_back(veins::Coord(startPosition.x-5, startPosition.y+5));
     coords.push_back(veins::Coord(startPosition.x+5, startPosition.y+5));
     coords.push_back(veins::Coord(startPosition.x+5, startPosition.y-5));
-    manager->getCommandInterface()->addPolygon("ris", "ristype", veins::TraCIColor(0, 0, 255, 255), true, 0, coords);
+    stringstream id;
+    id << "ris_" << getParentModule()->getIndex();
+    manager->getCommandInterface()->addPolygon(id.str(), "ristype", veins::TraCIColor(0, 0, 255, 255), true, 0, coords);
 
     BaseMobility::initialize(0);
     BaseMobility::initialize(1);
