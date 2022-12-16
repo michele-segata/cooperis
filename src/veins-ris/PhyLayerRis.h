@@ -137,7 +137,7 @@ protected:
      */
     std::unique_ptr<AnalogueModel> initializeObstacleShadowing(ParameterMap& params);
 
-    unique_ptr<AnalogueModel> initializeSimpleObstacleShadowing(ParameterMap& params);
+    unique_ptr<AnalogueModel> initializeSimpleObstacleShadowingRis(ParameterMap& params);
 
     /**
      * @brief Creates and initializes a RisPathLoss with the

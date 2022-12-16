@@ -53,4 +53,7 @@ message AirFrameRis extends veins::AirFrame {
 
     bool reflected;
     int originalId;
+
+    // whether the signal was shadowed by a building or not
+    bool shadowed = false;
 }

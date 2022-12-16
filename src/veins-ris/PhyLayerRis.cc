@@ -24,7 +24,6 @@
 #include "veins-ris/utility/Utils.h"
 
 #include "veins-ris/analogueModel/VehicleObstacleShadowingForVlc.h"
-#include "veins/modules/analogueModel/SimpleObstacleShadowing.h"
 #include "veins/base/connectionManager/BaseConnectionManager.h"
 #include "veins/modules/messages/AirFrame11p_m.h"
 #include "veins-ris/messages/AirFrameRis_m.h"
@@ -32,6 +31,7 @@
 #include "veins/base/toolbox/Spectrum.h"
 #include "veins-ris/analogueModel/RisPathLoss.h"
 #include "veins-ris/analogueModel/SimplePathlossModelRis.h"
+#include "veins-ris/analogueModel/SimpleObstacleShadowingRis.h"
 
 #include <memory>
 
@@ -153,8 +153,8 @@ unique_ptr<AnalogueModel> PhyLayerRis::getAnalogueModelFromName(std::string name
     if (name == "SimplePathlossModelRis") {
         return initializeSimplePathlossModelRis(params);
     }
-    if (name == "SimpleObstacleShadowing") {
-        return initializeSimpleObstacleShadowing(params);
+    if (name == "SimpleObstacleShadowingRis") {
+        return initializeSimpleObstacleShadowingRis(params);
     }
     if (name == "RisPathLoss") {
         return initializeRisPathLoss(params);
@@ -162,7 +162,7 @@ unique_ptr<AnalogueModel> PhyLayerRis::getAnalogueModelFromName(std::string name
     return BasePhyLayer::getAnalogueModelFromName(name, params);
 }
 
-unique_ptr<AnalogueModel> PhyLayerRis::initializeSimpleObstacleShadowing(ParameterMap& params)
+unique_ptr<AnalogueModel> PhyLayerRis::initializeSimpleObstacleShadowingRis(ParameterMap& params)
 {
 
     // init with default value
@@ -172,8 +172,8 @@ unique_ptr<AnalogueModel> PhyLayerRis::initializeSimpleObstacleShadowing(Paramet
     ParameterMap::iterator it;
 
     ObstacleControl* obstacleControlP = dynamic_cast<ObstacleControl*>(veins::findModuleByPath("obstaclesRis"));
-    if (!obstacleControlP) throw cRuntimeError("initializeSimpleObstacleShadowing(): cannot find ObstacleControl module");
-    return make_unique<SimpleObstacleShadowing>(this, *obstacleControlP, useTorus, playgroundSize);
+    if (!obstacleControlP) throw cRuntimeError("initializeSimpleObstacleShadowingRis(): cannot find ObstacleControl module");
+    return make_unique<SimpleObstacleShadowingRis>(this, *obstacleControlP, useTorus, playgroundSize);
 }
 
 unique_ptr<AnalogueModel> PhyLayerRis::initializeRisPathLoss(ParameterMap& params)
@@ -464,11 +464,12 @@ void PhyLayerRis::filterSignal(AirFrame* frame)
 
     if (isRIS) {
 
-        // THIS IS NOT ENOUGH: YOU NEED A MAP INDICATING FRAME ID AND PREVIOUS HOP. OTHERWISE YOU'RE NOT REPROPAGATING BECAUSE
-        // 1) YOU GET IT FROM THE NODE (SAVE ID)
-        // 2) WHEN YOU GET IT REFLECTED FROM A RIS YOU DON'T REFLECT IT (ALREADY RECEIVED AND REFLECTED)
         EV_TRACE << "RIS: checking whether AirFrame " << frameRis->getOriginalId() << " from module " << frameRis->getSenderModuleId() << " should be reflected\n";
-        if (repropagatedFrames.find(pair<int, int>(frameRis->getOriginalId(), frameRis->getSenderModuleId())) != repropagatedFrames.end()) {
+
+        if (frameRis->getShadowed()) {
+            EV_TRACE << "Frame was crossing a building and won't be reflected\n";
+        }
+        else if (repropagatedFrames.find(pair<int, int>(frameRis->getOriginalId(), frameRis->getSenderModuleId())) != repropagatedFrames.end()) {
             EV_TRACE << "RIS: AirFrame " << frameRis->getOriginalId() << " already repropagated\n";
         }
         else {
