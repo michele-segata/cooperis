@@ -22,8 +22,11 @@
 #pragma once
 
 #include "veins/base/phyLayer/BaseDecider.h"
+#include "veins-ris/PhyLayerRis.h"
 
 namespace veins {
+
+class PhyLayerRis;
 
 using veins::AirFrame;
 
@@ -52,6 +55,7 @@ protected:
     double bitrate;
 
     bool ignoreNonReflectedSignals = false;
+    bool ignoreShadowedSignals = false;
     bool ignoreNoiseAndInterference = false;
 
     double myBusyTime;
@@ -60,6 +64,8 @@ protected:
     std::map<AirFrame*, int> signalStates;
     bool collectCollisionStats;
     unsigned int collisions;
+
+    PhyLayerRis* phyLayer = nullptr;
 
 protected:
     /**
@@ -72,7 +78,7 @@ protected:
      */
     virtual DeciderResult* checkIfSignalOk(AirFrame* frame);
 
-    virtual simtime_t processNewSignal(AirFrame* frame);
+    virtual simtime_t processNewSignal(AirFrame* frame) override;
 
     /**
      * @brief Processes a received AirFrame.
@@ -83,35 +89,39 @@ protected:
      *
      * @return    usually return a value for: 'do not pass it again'
      */
-    virtual simtime_t processSignalEnd(AirFrame* frame);
+    virtual simtime_t processSignalEnd(AirFrame* frame) override;
 
     /** @brief computes if packet is ok or has errors*/
     enum DeciderRis::PACKET_OK_RESULT packetOk(double snirMin, double snrMin, int lengthMPDU, double bitrate);
+
+    virtual void switchToTx() override;
 
 public:
     /**
      * @brief Initializes the Decider with a pointer to its PhyLayer and
      * specific values for threshold and sensitivity
      */
-    DeciderRis(cComponent* owner, DeciderToPhyInterface* phy, double sensitivity, double bRate, bool ignoreNonReflectedSignals, bool ignoreNoiseAndInterference, int myIndex = -1, bool collectCollisionStatistics = false)
+    DeciderRis(cComponent* owner, DeciderToPhyInterface* phy, double sensitivity, double bRate, bool ignoreNonReflectedSignals, bool ignoreShadowedSignals, bool ignoreNoiseAndInterference, int myIndex = -1, bool collectCollisionStatistics = false)
         : BaseDecider(owner, phy, sensitivity, myIndex)
         , bitrate(bRate)
         , ignoreNonReflectedSignals(ignoreNonReflectedSignals)
+        , ignoreShadowedSignals(ignoreShadowedSignals)
         , ignoreNoiseAndInterference(ignoreNoiseAndInterference)
         , myBusyTime(0)
         , myStartTime(simTime().dbl())
         , collectCollisionStats(collectCollisionStatistics)
     {
+        phyLayer = check_and_cast<PhyLayerRis*>(owner);
     }
 
-    int getSignalState(AirFrame* frame);
+    int getSignalState(AirFrame* frame) override;
     virtual ~DeciderRis();
     /**
      * @brief invoke this method when the phy layer is also finalized,
      * so that statistics recorded by the decider can be written to
      * the output file
      */
-    virtual void finish();
+    virtual void finish() override;
 };
 
 } // namespace veins

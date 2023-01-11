@@ -60,6 +60,8 @@ typedef gsl_matrix_complex* CMatrix;
 #define RAD_TO_DEG_ROUND(x) (std::round(x*180/M_PI))
 #define DEG_TO_RAD(x) (x*M_PI/180)
 
+#define KEEP_SAME_ANGLE 10000
+
 class ReconfigurableIntelligentSurface {
 
 protected:
@@ -125,7 +127,7 @@ public:
      * @param phiI_rad the incidence angle phi (azimuth) in radians
      * @param thetaI_rad the incidence angle theta (elevation) in radians
      */
-    void configureMetaSurface(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad);
+    void configureMetaSurface(double phiR_rad=KEEP_SAME_ANGLE, double thetaR_rad=KEEP_SAME_ANGLE, double phiI_rad=KEEP_SAME_ANGLE, double thetaI_rad=KEEP_SAME_ANGLE);
 
     /**
      * Computes the gain of the antenna given a specific pair of incidence and reflection angles

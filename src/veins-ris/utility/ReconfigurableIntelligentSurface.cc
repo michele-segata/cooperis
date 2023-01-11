@@ -104,13 +104,27 @@ void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, dou
 {
 
     // TODO: remove this when the model with incidence angle comes in
-    phiI_rad = 0;
-    thetaI_rad = 0;
+//    phiI_rad = 0;
+//    thetaI_rad = 0;
 
-    configPhiR = phiR_rad;
-    configPhiI = phiI_rad;
-    configThetaR = thetaR_rad;
-    configThetaI = thetaI_rad;
+    if (phiR_rad < KEEP_SAME_ANGLE)
+        configPhiR = phiR_rad;
+    else
+        phiR_rad = configPhiR;
+    if (phiI_rad < KEEP_SAME_ANGLE)
+        configPhiI = phiI_rad;
+    else
+        phiI_rad = configPhiI;
+    if (thetaR_rad < KEEP_SAME_ANGLE)
+        configThetaR = thetaR_rad;
+    else
+        thetaR_rad = configThetaR;
+    if (thetaI_rad < KEEP_SAME_ANGLE)
+        configThetaI = thetaI_rad;
+    else
+        thetaI_rad = configThetaI;
+
+//    printf("Configuring metasurface for phiR=%.2f, thetaR=%.2f, phiI=%.2f, thetaI=%.2f\n", RAD_TO_DEG(phiR_rad), RAD_TO_DEG(thetaR_rad), RAD_TO_DEG(phiI_rad), RAD_TO_DEG(thetaI_rad));
 
     phiR_rad = REF_TO_MATH_PHI(phiR_rad);
     thetaR_rad = REF_TO_MATH_THETA(thetaR_rad);
@@ -182,8 +196,8 @@ double ReconfigurableIntelligentSurface::gain(double phiR_rad, double thetaR_rad
 {
 
     // TODO: remove this when the model with incidence angle comes in
-    phiI_rad = 0;
-    thetaI_rad = 0;
+//    phiI_rad = 0;
+//    thetaI_rad = 0;
 
     if (canUseCache(phiI_rad, thetaI_rad)) {
         return cachedGain(phiR_rad, thetaR_rad);

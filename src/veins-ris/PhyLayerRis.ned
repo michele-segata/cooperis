@@ -62,14 +62,23 @@ simple PhyLayerRis extends BasePhyLayer
         double ris_v1_y = default(0);
         double ris_v1_z = default(0);
 
+        // when to apply the initial angles configuration of the metasurface
+        double initialConfigurationTime @unit(s) = default(1us);
+        // full path name of node to initially configure incidence/reflection angles
+        string focusBeamFrom = default("");
+        string pointBeamTo = default("");
         // configure RIS on startup
+        // incidence angles are ignored if focusBeamFrom is set
         double initialIncidencePhi @unit(rad) = default(0rad);
         double initialIncidenceTheta @unit(rad) = default(0rad);
+        // reflection angles are ignored if pointBeamTo is set
         double initialReflectionPhi @unit(rad) = default(0rad);
         double initialReflectionTheta @unit(rad) = default(0rad);
 
         // whether to ignore non reflected frame on reception (capture effect, as non reflected signal comes in first)
         bool ignoreNonReflectedSignals = default(false);
+        // whether to ignore signals that are shadowed (i.e., crossing through objects)
+        bool ignoreShadowedSignals = default(false);
         // whether to receive every packet regardless of noise and interference
         bool ignoreNoiseAndInterference = default(false);
 

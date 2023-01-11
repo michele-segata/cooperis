@@ -54,20 +54,30 @@ simtime_t DeciderRis::processNewSignal(AirFrame* msg)
     ss.str(std::string());
 
     ss << "RIS Gains: [";
-    for (int i = 0; i < frame->getRisGainsArraySize(); i++)
-        ss << (10*log10(frame->getRisGains(i))) << " dB, ";
+    for (int i = 0; i < frame->getRisGain_dBArraySize(); i++)
+        ss << (10*log10(frame->getRisGain_dB(i))) << " dB, ";
     ss << "]\n";
     EV_TRACE << ss.str();
     ss.str(std::string());
 
     ss << "Loss on paths: [";
-    for (int i = 0; i < frame->getLoss_dBArraySize(); i++)
-        ss << frame->getLoss_dB(i) << " dB, ";
+    for (int i = 0; i < frame->getPathLoss_dBArraySize(); i++)
+        ss << frame->getPathLoss_dB(i) << " dB, ";
+    ss << "]\n";
+    EV_TRACE << ss.str();
+    ss.str(std::string());
+    ss << "Applied loss on paths: [";
+    for (int i = 0; i < frame->getActualLoss_dBArraySize(); i++)
+        ss << frame->getActualLoss_dB(i) << " dB, ";
     ss << "]\n";
     EV_TRACE << ss.str();
 
     if (!frame->getReflected() && ignoreNonReflectedSignals) {
         EV_TRACE << "Ignoring non reflected signal\n";
+        return signal.getReceptionEnd();
+    }
+    if (frame->getShadowed() && ignoreShadowedSignals) {
+        EV_TRACE << "Ignoring shadowed signal\n";
         return signal.getReceptionEnd();
     }
 
@@ -82,19 +92,28 @@ simtime_t DeciderRis::processNewSignal(AirFrame* msg)
     }
     else {
 
-        // This value might be just an intermediate result (due to short circuiting)
-        setChannelIdleStatus(false);
-
-        myBusyTime += signal.getDuration().dbl();
-
-        if (!currentSignal.first) {
-            // NIC is not yet synced to any frame, so lock and try to decode this frame
-            currentSignal.first = frame;
-            EV_TRACE << "AirFrame: " << frame->getId() << " with (" << recvPower << " > " << minPowerLevel << ") -> Trying to receive AirFrame." << std::endl;
+        if (phyLayer->getRadioState() == Radio::TX) {
+            frame->setBitError(true);
+            frame->setWasTransmitting(true);
+            EV_TRACE << "AirFrameRis: " << frame->getId() << " (" << recvPower << ") received, while already sending. Setting BitErrors to true" << std::endl;
         }
         else {
-            // NIC is currently trying to decode another frame. this frame will be simply treated as interference
-            EV_TRACE << "AirFrame: " << frame->getId() << " with (" << recvPower << " > " << minPowerLevel << ") -> Already synced to another AirFrame. Treating AirFrame as interference." << std::endl;
+
+            // This value might be just an intermediate result (due to short circuiting)
+            setChannelIdleStatus(false);
+
+            myBusyTime += signal.getDuration().dbl();
+
+            if (!currentSignal.first) {
+                // NIC is not yet synced to any frame, so lock and try to decode this frame
+                currentSignal.first = frame;
+                EV_TRACE << "AirFrame: " << frame->getId() << " with (" << recvPower << " > " << minPowerLevel << ") -> Trying to receive AirFrame." << std::endl;
+            }
+            else {
+                // NIC is currently trying to decode another frame. this frame will be simply treated as interference
+                EV_TRACE << "AirFrame: " << frame->getId() << " with (" << recvPower << " > " << minPowerLevel << ") -> Already synced to another AirFrame. Treating AirFrame as interference." << std::endl;
+            }
+
         }
         return signal.getReceptionEnd();
     }
@@ -108,6 +127,22 @@ int DeciderRis::getSignalState(AirFrame* frame)
     }
     else {
         return signalStates[frame];
+    }
+}
+
+
+void DeciderRis::switchToTx()
+{
+    if (currentSignal.first != 0) {
+        // we are currently trying to receive a frame.
+        // if the above layer decides to transmit anyhow, we need to abort reception
+        AirFrameRis* currentFrame = dynamic_cast<AirFrameRis*>(currentSignal.first);
+        ASSERT(currentFrame);
+        // flag the frame as "while transmitting"
+        currentFrame->setWasTransmitting(true);
+        currentFrame->setBitError(true);
+        // forget about the signal
+        currentSignal.first = 0;
     }
 }
 
@@ -149,14 +184,9 @@ DeciderResult* DeciderRis::checkIfSignalOk(AirFrame* frame)
 
     EV_TRACE << "Packet SINR: " << 10*log10(sinrMin) << "\n";
 
-    std::vector<double> gains;
-    gains.reserve(frameRis->getRisGainsArraySize());
-    for (int i = 0; i < frameRis->getRisGainsArraySize(); i++)
-        gains.push_back(frameRis->getRisGains(i));
-
     if (ignoreNoiseAndInterference) {
         EV_TRACE << "Ignoring noise and interference. Packet is fine! We can decode it" << std::endl;
-        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, frameRis);
         return result;
     }
 
@@ -164,7 +194,7 @@ DeciderResult* DeciderRis::checkIfSignalOk(AirFrame* frame)
 
     case DECODED:
         EV_TRACE << "Packet is fine! We can decode it" << std::endl;
-        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(true, payloadBitrate, sinrMin, recvPower_dBm, false, frameRis);
         break;
 
     case NOT_DECODED:
@@ -174,13 +204,13 @@ DeciderResult* DeciderRis::checkIfSignalOk(AirFrame* frame)
         else {
             EV_TRACE << "Packet has bit Errors due to low power. Lost " << std::endl;
         }
-        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, false, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, false, frameRis);
         break;
 
     case COLLISION:
         EV_TRACE << "Packet has bit Errors due to collision. Lost " << std::endl;
         collisions++;
-        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, true, gains, frameRis->getReflectionPhi(), frameRis->getReflectionTheta(), frameRis->getIncidencePhi(), frameRis->getIncidenceTheta(), frameRis->getReflected());
+        result = new DeciderResultRis(false, payloadBitrate, sinrMin, recvPower_dBm, true, frameRis);
         break;
 
     default:

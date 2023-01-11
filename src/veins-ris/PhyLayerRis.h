@@ -31,6 +31,7 @@
 #include "veins/modules/phy/Decider80211pToPhy80211pInterface.h"
 #include "veins/base/utils/Move.h"
 #include "veins/modules/world/annotations/AnnotationManager.h"
+#include "veins-ris/messages/AirFrameRis_m.h"
 
 namespace veins {
 
@@ -59,6 +60,8 @@ public:
     double getMetasurfaceGain(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad) const;
 
     void configureMetaSurface(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad);
+    void configureMetaSurfaceReflection(double phiR_rad, double thetaR_rad);
+    void configureMetaSurfaceIncidence(double phiI_rad, double thetaI_rad);
 
     virtual int numInitStages() const override { return 2; };
 
@@ -72,6 +75,7 @@ public:
      * If the vehicle positions are unknown reconfiguration is not performed
      */
     void requestReconfiguration(int txId, int rxId);
+    void requestReconfiguration(int nodeId, bool incidence);
 
 protected:
 
@@ -95,6 +99,9 @@ protected:
     // compute as the cross product between v2 and v1
     Coord ris_vn;
 
+    double initialConfigurationTime = 1e-6;
+    string focusBeamFrom = "";
+    string pointBeamTo = "";
     double initialIncidencePhi = 0;
     double initialIncidenceTheta = 0;
     double initialReflectionPhi = 0;
@@ -111,17 +118,17 @@ protected:
     cMessage* initMetasurface = nullptr;
 
     bool ignoreNonReflectedSignals = false;
+    bool ignoreShadowedSignals = false;
     bool ignoreNoiseAndInterference = false;
 
     bool useProductOfDistances = false;
 
     double repropagationThreshold_mW = 10e-10;
 
-    // keeps track of the frames that have been reflected and senders, to avoid reflecting them twice
-    std::set<pair<int, int>> repropagatedFrames;
-
     // map from vehicle id to their coordinates, to enable reconfiguration of the RIS
     std::map<int, Coord> vehicles;
+
+    bool alreadyReflected(const AirFrameRis* frame);
 
     /**
      * @brief Creates and returns an instance of the AnalogueModel with the
@@ -144,12 +151,6 @@ protected:
      * passed parameter values.
      */
     std::unique_ptr<AnalogueModel> initializeRisPathLoss(ParameterMap& params);
-
-    /**
-     * @brief Creates and initializes a SimplePathLoss with the
-     * passed parameter values.
-     */
-    std::unique_ptr<AnalogueModel> initializeSimplePathlossModelRis(ParameterMap& params);
 
     /**
      * @brief Creates and returns an instance of the Decider with the specified
@@ -177,7 +178,7 @@ protected:
      * AirFrame and sets all necessary attributes.
      */
     virtual std::unique_ptr<AirFrame> encapsMsg(cPacket* msg) override;
-    virtual std::unique_ptr<AirFrame> encapsMsg(cPacket* macPkt, double txPower, double incidencePhi= 0, double incidenceTheta= 0, bool reflected= false, int originalId= -1);
+    virtual std::unique_ptr<AirFrame> encapsMsg(cPacket* macPkt, double txPower, bool reflected= false, int originalId= -1);
 
     virtual void handleAirFrameReceiving(AirFrame* msg) override;
 
@@ -186,7 +187,7 @@ protected:
     virtual void handleMessage(cMessage* msg) override;
     virtual void handleSelfMessage(cMessage* msg) override;
     virtual void sendUp(AirFrame* frame, DeciderResult* result) override;
-    simtime_t setRadioState(int rs) override;
+//    simtime_t setRadioState(int rs) override;
 
     /**
      * Override filter to be able to add metadata to the AirFrame and be able to repropagate it immediately (reflect)

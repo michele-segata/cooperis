@@ -95,6 +95,7 @@ void MacLayerRis::handleLowerControl(cMessage* msg)
     case MacToPhyInterface::TX_OVER:
         transmitting = false;
         transmissionOpportunity();
+        phy->setRadioState(Radio::RX);
         delete msg;
         break;
     default:

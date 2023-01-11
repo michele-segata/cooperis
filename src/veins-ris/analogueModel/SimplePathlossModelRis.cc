@@ -72,7 +72,7 @@ void SimplePathlossModelRis::filterSignal(Signal* signal, AirFrame* frame)
             double att = (wavelength * wavelength) * distFactor;
             attenuation.at(i) = att;
             if (i == 0)
-                frameRis->appendLoss_dB(10*log10(att));
+                frameRis->appendPathLoss_dB(10*log10(att));
         }
     }
     else {
@@ -80,7 +80,7 @@ void SimplePathlossModelRis::filterSignal(Signal* signal, AirFrame* frame)
         for (uint16_t i = 0; i < signal->getNumValues(); i++) {
             attenuation.at(i) = additionalPathFactor;
             if (i == 0)
-                frameRis->appendLoss_dB(10*log10(additionalPathFactor));
+                frameRis->appendPathLoss_dB(10*log10(additionalPathFactor));
         }
     }
 

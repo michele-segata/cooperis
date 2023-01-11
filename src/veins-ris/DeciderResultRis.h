@@ -24,14 +24,21 @@
 #include "veins/veins.h"
 
 #include "veins/modules/phy/DeciderResult80211.h"
+#include "veins-ris/messages/AirFrameRis_m.h"
 
 namespace veins {
 
 class VEINS_API DeciderResultRis : public DeciderResult80211 {
 protected:
-    /** @brief Stores the gain applied by the ris TODO: transform this into an array */
-    std::vector<double> gains;
-    double phiR, thetaR, phiI, thetaI;
+    long int id;
+    std::vector<double> gains_dB;
+    std::vector<double> paths_m;
+    std::vector<double> losses_dB;
+    std::vector<double> actualLosses_dB;
+    std::vector<double> phiRs;
+    std::vector<double> thetaRs;
+    std::vector<double> phiIs;
+    std::vector<double> thetaIs;
     bool reflected;
 
 public:
@@ -40,39 +47,104 @@ public:
      *
      * "bitrate" defines the bit-rate of the transmission of the packet.
      */
-    DeciderResultRis(bool isCorrect, double bitrate, double snr, double recvPower_dBm = 0, bool collision = false, std::vector<double> gains = std::vector<double>(), double phiR= 0, double thetaR= 0, double phiI= 0, double thetaI= 0, bool reflected= false)
+    DeciderResultRis(bool isCorrect, double bitrate, double snr, double recvPower_dBm = 0, bool collision = false, const AirFrameRis* frame = nullptr)
         : DeciderResult80211(isCorrect, bitrate, snr, recvPower_dBm, collision)
-        , gains(gains)
-        , phiR(phiR)
-        , thetaR(thetaR)
-        , phiI(phiI)
-        , thetaI(thetaI)
-        , reflected(reflected)
     {
+        id = frame->getId();
+
+        // store list of gains
+        gains_dB.reserve(frame->getRisGain_dBArraySize());
+        for (int i = 0; i < frame->getRisGain_dBArraySize(); i++)
+            gains_dB.push_back(frame->getRisGain_dB(i));
+
+        // store the length of reflected paths
+        paths_m.reserve(frame->getPathsArraySize());
+        for (int i = 0; i < frame->getPathsArraySize(); i++)
+            paths_m.push_back(frame->getPaths(i));
+
+        // store list of path losses
+        losses_dB.reserve(frame->getPathLoss_dBArraySize());
+        for (int i = 0; i < frame->getPathLoss_dBArraySize(); i++)
+            losses_dB.push_back(frame->getPathLoss_dB(i));
+
+        // store list of actual losses (gain + loss)
+        actualLosses_dB.reserve(frame->getActualLoss_dBArraySize());
+        for (int i = 0; i < frame->getActualLoss_dBArraySize(); i++)
+            actualLosses_dB.push_back(frame->getActualLoss_dB(i));
+
+        // store list of incidence and reflection angles
+        phiRs.reserve(frame->getReflectionPhiArraySize());
+        for (int i = 0; i < frame->getReflectionPhiArraySize(); i++)
+            phiRs.push_back(frame->getReflectionPhi(i));
+        thetaRs.reserve(frame->getReflectionThetaArraySize());
+        for (int i = 0; i < frame->getReflectionThetaArraySize(); i++)
+            thetaRs.push_back(frame->getReflectionTheta(i));
+        phiIs.reserve(frame->getIncidencePhiArraySize());
+        for (int i = 0; i < frame->getIncidencePhiArraySize(); i++)
+            phiIs.push_back(frame->getIncidencePhi(i));
+        thetaIs.reserve(frame->getIncidenceThetaArraySize());
+        for (int i = 0; i < frame->getIncidenceThetaArraySize(); i++)
+            thetaIs.push_back(frame->getIncidenceTheta(i));
+
+        // store whether frame has been reflected
+        reflected = frame->getReflected();
     }
 
-    std::vector<double> getGains() const
+    DeciderResultRis(const DeciderResultRis& r) :
+        DeciderResult80211(r),
+        gains_dB(r.gains_dB),
+        paths_m(r.paths_m),
+        losses_dB(r.losses_dB),
+        actualLosses_dB(r.actualLosses_dB),
+        phiRs(r.phiRs),
+        thetaRs(r.thetaRs),
+        phiIs(r.phiIs),
+        thetaIs(r.thetaIs)
+    {}
+
+    long int getId() const
     {
-        return gains;
+        return id;
     }
 
-    double getPhiR() const
+    std::vector<double> getGains_dB() const
     {
-        return phiR;
+        return gains_dB;
     }
-    double getThetaR() const
+
+    std::vector<double> getLosses_dB() const
     {
-        return thetaR;
+        return losses_dB;
     }
-    double getPhiI() const
+
+    std::vector<double> getActualLosses_dB() const
     {
-        return phiI;
+        return actualLosses_dB;
     }
-    double getThetaI() const
+
+    std::vector<double> getPaths_m() const
     {
-        return thetaI;
+        return paths_m;
     }
-    double getReflected() const
+
+    std::vector<double> getPhiRs() const
+    {
+        return phiRs;
+    }
+    std::vector<double> getThetaRs() const
+    {
+        return thetaRs;
+    }
+    std::vector<double> getPhiIs() const
+    {
+        return phiIs;
+    }
+    std::vector<double> getThetaIs() const
+    {
+        return thetaIs;
+    }
+
+    bool getReflected() const
     {
         return reflected;
     }

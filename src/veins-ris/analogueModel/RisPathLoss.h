@@ -26,13 +26,13 @@
 #include "veins-ris/veins-ris.h"
 
 #include "veins/base/phyLayer/AnalogueModel.h"
-#include "veins-ris/utility/ConstsVlc.h"
 #include "veins/modules/mobility/traci/TraCIMobility.h"
 #include "veins/modules/world/annotations/AnnotationManager.h"
 #include "veins-ris/utility/Utils.h"
 
 #include "veins-ris/PhyLayerRis.h"
 #include "veins-ris/FrameAnalogueModel.h"
+#include "veins-ris/messages/AirFrameRis_m.h"
 
 
 using veins::AirFrame;
@@ -49,28 +49,41 @@ namespace veins {
  *
  */
 
-class VEINS_RIS_API RisPathLoss : public AnalogueModel, public FrameAnalogueModel {
+class VEINS_RIS_API RisPathLoss : public SimplePathlossModel, public FrameAnalogueModel {
 protected:
     AnnotationManager* annotations;
 
     bool debug = true;
-    PhyLayerRis* phyLayer;
+    PhyLayerRis* phyLayer = nullptr;
 
     double frequency;
     double n = 2;
 
+    bool useProductOfDistances;
+    double pathLossAlpha = 2;
+
+    double wavelength;
+    double wavelengthSquare;
+
     void initialize();
     void finalize();
 
+    double computeRisGain(Signal* signal, AirFrameRis* frame, const Coord& senderPos, const Coord& receiverPos);
+    double computePathLoss(Signal* signal, AirFrameRis* frame, const Coord& senderPos, const Coord& receiverPos);
+
 public:
-    RisPathLoss(cComponent* owner, double frequency, int n)
-        : AnalogueModel(owner)
+    RisPathLoss(cComponent* owner, double alpha, bool useTorus, bool useProductOfDistances, const Coord& playgroundSize, double frequency, int n)
+        : SimplePathlossModel(owner, alpha, useTorus, playgroundSize)
         , frequency(frequency)
         , n(n)
+        , useProductOfDistances(useProductOfDistances)
+        , pathLossAlpha(alpha)
     {
         phyLayer = check_and_cast<PhyLayerRis*>(owner);
         annotations = AnnotationManagerAccess().getIfExists();
         ASSERT(annotations);
+        wavelength = BaseWorldUtility::speedOfLight() / frequency;
+        wavelengthSquare = wavelength * wavelength;
     };
 
     virtual void filterSignal(Signal* signal) override;

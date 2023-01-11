@@ -35,7 +35,6 @@ void RisPathLoss::filterSignal(Signal* signal)
 void RisPathLoss::filterSignal(Signal* signal, AirFrame* frame)
 {
     AirFrameRis* risMsg = check_and_cast<AirFrameRis*>(frame);
-    PhyLayerRis* source = check_and_cast<PhyLayerRis*>(frame->getSenderModule());
 
     auto sender = signal->getSenderPoa();
     auto receiver = signal->getReceiverPoa();
@@ -43,18 +42,82 @@ void RisPathLoss::filterSignal(Signal* signal, AirFrame* frame)
     auto senderPos = sender.pos.getPositionAt();
     auto receiverPos = receiver.pos.getPositionAt();
 
+    double risGain = computeRisGain(signal, risMsg, senderPos, receiverPos);
+    double pathLoss = computePathLoss(signal, risMsg, senderPos, receiverPos);
+
+    double attenuation = std::min(1.0, risGain * pathLoss);
+    double attenuation_dB = 10 * log10(attenuation);
+    risMsg->appendActualLoss_dB(attenuation_dB);
+    EV_TRACE << "RisPathLoss: applying actual attenuation of " << attenuation_dB << " dB\n";
+
+    *signal *= attenuation;
+
+}
+
+double RisPathLoss::computePathLoss(Signal* signal, AirFrameRis* frame, const Coord& senderPos, const Coord& receiverPos)
+{
+
+    double attenuation = 1;
+
+    /** Calculate the distance factor */
+    double sqrDistance = useTorus ? receiverPos.sqrTorusDist(senderPos, playgroundSize) : receiverPos.sqrdist(senderPos);
+    double distance = std::sqrt(sqrDistance);
+
+    // save the length of the current path
+    frame->appendPaths(distance);
+
+    double totalDistance = frame->getTotalDistance() + distance;
+
+    EV_TRACE << "sqrdistance is: " << sqrDistance << endl;
+
+    if (sqrDistance <= 1.0) {
+        // attenuation is negligible
+        return attenuation;
+    }
+
+    if (useProductOfDistances || frame->getPathsArraySize() == 1) {
+        // using far field model, simply compute the path loss independently
+        // the part of the attenuation only depending on the distance
+        double distFactor = pow(sqrDistance, -pathLossAlphaHalf) / (16.0 * M_PI * M_PI);
+        EV_TRACE << "distance factor is: " << distFactor << endl;
+        attenuation = wavelengthSquare * distFactor;
+    }
+    else {
+        attenuation = pow(frame->getTotalDistance() / totalDistance, pathLossAlpha);
+    }
+    double attenuation_dB = 10*log10(attenuation);
+    EV_TRACE << "Applying an attenuation of " << attenuation_dB << " dB\n";
+    frame->appendPathLoss_dB(attenuation_dB);
+
+    // save the total length travelled
+    frame->setTotalDistance(totalDistance);
+    return attenuation;
+
+}
+
+double RisPathLoss::computeRisGain(Signal* signal, AirFrameRis* frame, const Coord& senderPos, const Coord& receiverPos)
+{
+
+    PhyLayerRis* source = check_and_cast<PhyLayerRis*>(frame->getSenderModule());
+
     if (source->isReflectiveMetaSurface()) {
-        Angles reflection = spherical_angles(risMsg->getRis_v1(), risMsg->getRis_v2(), risMsg->getRis_vn(), senderPos, receiverPos);
+        Angles reflection = spherical_angles(frame->getRis_v1(), frame->getRis_v2(), frame->getRis_vn(), senderPos, receiverPos);
+        double phiI = frame->getIncidencePhi(frame->getIncidencePhiArraySize()-1);
+        double thetaI = frame->getIncidenceTheta(frame->getIncidenceThetaArraySize()-1);
         EV_TRACE << phyLayer->getFullPath() << " in position " << receiverPos.x << " " << receiverPos.y << " " << receiverPos.z << "\n";
         EV_TRACE << phyLayer->getFullPath() << " incoming signal from " << senderPos.x << " " << senderPos.y << " " << senderPos.z << "\n";
-        EV_TRACE << phyLayer->getFullPath() << " Received signal from RIS. Incidence phi=" << RAD_TO_DEG(risMsg->getIncidencePhi()) << " theta=" << RAD_TO_DEG(risMsg->getIncidenceTheta()) << " Reflection phi=" << RAD_TO_DEG(reflection.phi) << " theta=" << RAD_TO_DEG(reflection.theta) << "\n";
-        double gain = source->getMetasurfaceGain(reflection.phi, reflection.theta, risMsg->getIncidencePhi(), risMsg->getIncidenceTheta());
-        risMsg->appendRisGains(gain);
-        risMsg->setReflectionPhi(reflection.phi);
-        risMsg->setReflectionTheta(reflection.theta);
-        EV_TRACE << "Applying a gain of " << gain << "(" << (10*log10(gain)) << " dB) to the incoming signal\n";
+        EV_TRACE << phyLayer->getFullPath() << " Received signal from RIS. Incidence phi=" << RAD_TO_DEG(phiI) << " theta=" << RAD_TO_DEG(thetaI) << " Reflection phi=" << RAD_TO_DEG(reflection.phi) << " theta=" << RAD_TO_DEG(reflection.theta) << "\n";
+        double gain = source->getMetasurfaceGain(reflection.phi, reflection.theta, phiI, thetaI);
+        double gain_dB = 10 * log10(gain);
+        frame->appendRisGain_dB(gain_dB);
+        frame->appendReflectionPhi(reflection.phi);
+        frame->appendReflectionTheta(reflection.theta);
+        EV_TRACE << "Applying a gain of " << gain << "(" << gain_dB << " dB) to the incoming signal\n";
 
-        *signal *= gain;
+        return gain;
+    }
+    else {
+        return 1;
     }
 
 }
