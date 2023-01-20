@@ -30,7 +30,7 @@ namespace veins {
 
 class VEINS_API DeciderResultRis : public DeciderResult80211 {
 protected:
-    long int id;
+    long int frameId;
     std::vector<double> gains_dB;
     std::vector<double> paths_m;
     std::vector<double> losses_dB;
@@ -50,7 +50,7 @@ public:
     DeciderResultRis(bool isCorrect, double bitrate, double snr, double recvPower_dBm = 0, bool collision = false, const AirFrameRis* frame = nullptr)
         : DeciderResult80211(isCorrect, bitrate, snr, recvPower_dBm, collision)
     {
-        id = frame->getId();
+        frameId = frame->getId();
 
         // store list of gains
         gains_dB.reserve(frame->getRisGain_dBArraySize());
@@ -92,6 +92,7 @@ public:
 
     DeciderResultRis(const DeciderResultRis& r) :
         DeciderResult80211(r),
+        frameId(r.frameId),
         gains_dB(r.gains_dB),
         paths_m(r.paths_m),
         losses_dB(r.losses_dB),
@@ -102,9 +103,9 @@ public:
         thetaIs(r.thetaIs)
     {}
 
-    long int getId() const
+    long int getFrameId() const
     {
-        return id;
+        return frameId;
     }
 
     std::vector<double> getGains_dB() const
