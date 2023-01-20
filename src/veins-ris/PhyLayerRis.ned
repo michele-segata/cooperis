@@ -75,6 +75,9 @@ simple PhyLayerRis extends BasePhyLayer
         double initialReflectionPhi @unit(rad) = default(0rad);
         double initialReflectionTheta @unit(rad) = default(0rad);
 
+        // whenever a frame is reflected, reconfigure the RIS to point towards that node
+        string destinationNodeToTrack = default("");
+
         // whether to ignore non reflected frame on reception (capture effect, as non reflected signal comes in first)
         bool ignoreNonReflectedSignals = default(false);
         // whether to ignore signals that are shadowed (i.e., crossing through objects)

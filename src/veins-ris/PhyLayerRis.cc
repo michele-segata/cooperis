@@ -21,11 +21,9 @@
 
 #include "veins/veins.h"
 #include "veins-ris/PhyLayerRis.h"
-#include "veins-ris/utility/Utils.h"
 
 #include "veins-ris/analogueModel/VehicleObstacleShadowingForVlc.h"
 #include "veins/base/connectionManager/BaseConnectionManager.h"
-#include "veins-ris/utility/Utils.h"
 #include "veins/base/toolbox/Spectrum.h"
 #include "veins-ris/analogueModel/RisPathLoss.h"
 #include "veins-ris/analogueModel/SimplePathlossModelRis.h"
@@ -78,6 +76,7 @@ void PhyLayerRis::initialize(int stage)
             initialIncidenceTheta = par("initialIncidenceTheta");
             initialReflectionPhi = par("initialReflectionPhi");
             initialReflectionTheta = par("initialReflectionTheta");
+            destinationNodeToTrack = par("destinationNodeToTrack").stdstringValue();
 
             initMetasurface = new cMessage("initMetasurface");
             scheduleAt(initialConfigurationTime, initMetasurface);
@@ -283,19 +282,26 @@ void PhyLayerRis::handleSelfMessage(cMessage* msg)
         Coord myPos = antennaPosition.getPositionAt();
         if (focusBeamFrom.compare("") != 0) {
             cModule* module = findModuleByPath(focusBeamFrom.c_str());
-            BaseMobility* mobility = FindModule<BaseMobility*>::findSubModule(module);
-            Coord otherPos = mobility->getPositionAt(simTime());
-            Angles incident = spherical_angles(ris_v1, ris_v2, ris_vn, myPos, otherPos);
-            initialIncidencePhi = incident.phi;
-            initialIncidenceTheta = incident.theta;
+            if (module) {
+                BaseMobility* mobility = FindModule<BaseMobility*>::findSubModule(module);
+                Coord otherPos = mobility->getPositionAt(simTime());
+                Angles incident = spherical_angles(ris_v1, ris_v2, ris_vn, myPos, otherPos);
+                initialIncidencePhi = incident.phi;
+                initialIncidenceTheta = incident.theta;
+            }
+            else {
+                std::cout << getFullPath() << ": Ignoring focusBeamFrom parameter as module " << focusBeamFrom << " cannot be found\n";
+            }
         }
         if (pointBeamTo.compare("") != 0) {
-            cModule* module = findModuleByPath(pointBeamTo.c_str());
-            BaseMobility* mobility = FindModule<BaseMobility*>::findSubModule(module);
-            Coord otherPos = mobility->getPositionAt(simTime());
-            Angles reflected = spherical_angles(ris_v1, ris_v2, ris_vn, myPos, otherPos);
-            initialReflectionPhi = reflected.phi;
-            initialReflectionTheta = reflected.theta;
+            Angles reflected;
+            if (pointBeamTowards(pointBeamTo, reflected)) {
+                initialReflectionPhi = reflected.phi;
+                initialReflectionTheta = reflected.theta;
+            }
+            else {
+                std::cout << getFullPath() << ": Ignoring pointBeamTo parameter as module " << pointBeamTo << " cannot be found\n";
+            }
         }
         configureMetaSurface(initialReflectionPhi, initialReflectionTheta, initialIncidencePhi, initialIncidenceTheta);
         cancelAndDelete(initMetasurface);
@@ -502,6 +508,18 @@ void PhyLayerRis::filterSignal(AirFrame* frame)
         }
         else {
             EV_TRACE << "RIS: AirFrame " << frameRis->getOriginalId() << " should be reflected\n";
+
+            // before reflecting, reconfigure RIS to point towards a certain destination
+            if (destinationNodeToTrack.compare("") != 0) {
+                Angles reflected;
+                if (pointBeamTowards(destinationNodeToTrack, reflected)) {
+                    configureMetaSurfaceReflection(reflected.phi, reflected.theta);
+                }
+                else {
+                    std::cout << getFullPath() << ": Not reconfiguring RIS as module " << destinationNodeToTrack << " cannot be found\n";
+                }
+            }
+
             // if this is an RIS, we should reflect, but we need to attach metadata first
             Angles incident = spherical_angles(getRis_v1(), getRis_v2(), getRis_vn(), receiverPosition.getPositionAt(), senderPosition.getPositionAt());
             double recvPower_mW = signal.getAtCenterFrequency();
@@ -580,6 +598,21 @@ void PhyLayerRis::filterSignal(AirFrame* frame)
         }
     }
 
+}
+
+bool PhyLayerRis::pointBeamTowards(string nodeId, Angles &angles)
+{
+    cModule* module = findModuleByPath(nodeId.c_str());
+    if (module) {
+        Coord myPos = antennaPosition.getPositionAt();
+        BaseMobility* mobility = FindModule<BaseMobility*>::findSubModule(module);
+        Coord otherPos = mobility->getPositionAt(simTime());
+        angles = spherical_angles(ris_v1, ris_v2, ris_vn, myPos, otherPos);
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 void PhyLayerRis::updateVehiclePosition(int vehicleId, const Coord& position)

@@ -32,6 +32,7 @@
 #include "veins/base/utils/Move.h"
 #include "veins/modules/world/annotations/AnnotationManager.h"
 #include "veins-ris/messages/AirFrameRis_m.h"
+#include "veins-ris/utility/Utils.h"
 
 namespace veins {
 
@@ -77,6 +78,8 @@ public:
     void requestReconfiguration(int txId, int rxId);
     void requestReconfiguration(int nodeId, bool incidence);
 
+    bool pointBeamTowards(string nodeId, Angles &angles);
+
 protected:
 
     enum ProtocolIds {
@@ -106,6 +109,7 @@ protected:
     double initialIncidenceTheta = 0;
     double initialReflectionPhi = 0;
     double initialReflectionTheta = 0;
+    string destinationNodeToTrack = "";
 
     ReconfigurableIntelligentSurface* ris = nullptr;
 
