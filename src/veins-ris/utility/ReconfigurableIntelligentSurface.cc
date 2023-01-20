@@ -198,8 +198,8 @@ double ReconfigurableIntelligentSurface::gain(double phiR_rad, double thetaR_rad
 {
 
     // TODO: remove this when the model with incidence angle comes in
-//    phiI_rad = 0;
-//    thetaI_rad = 0;
+    phiI_rad = 0;
+    thetaI_rad = 0;
 
     if (canUseCache(phiI_rad, thetaI_rad)) {
         return cachedGain(phiR_rad, thetaR_rad);
