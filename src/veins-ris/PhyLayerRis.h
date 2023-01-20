@@ -111,6 +111,10 @@ protected:
     double initialReflectionTheta = 0;
     string destinationNodeToTrack = "";
 
+    int codingStates = 2;
+    int cellsPerLambda = 3;
+    int lambdaSize = 5;
+
     ReconfigurableIntelligentSurface* ris = nullptr;
 
     AnnotationManager* annotations = nullptr;

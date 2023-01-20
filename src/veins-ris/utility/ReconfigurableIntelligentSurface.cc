@@ -22,16 +22,18 @@
 #include <gsl/gsl_complex_math.h>
 #include <veins-ris/utility/ReconfigurableIntelligentSurface.h>
 
-ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(double frequency, int n)
+ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(double frequency, int n, int cellsPerLambda, int lambdaSize)
 {
+
+    printf("ReconfigurableIntelligentSurface: freq=%f Hz, n=%d, cellsPerLambda=%d, lambdaSize=%d, totalCells=%f\n", frequency, n, cellsPerLambda, lambdaSize, pow(cellsPerLambda*lambdaSize, 2));
     E = linspace(0, pow(2, n) - 1, pow(2, n));
     gsl_vector_scale(E, M_PI_X_2 / pow(2, n));
     c = 299792458;
     f = frequency;
     lambda = c / f;
     k = M_PI_X_2 / lambda;
-    du = lambda / 3;
-    DN = 5 * lambda;
+    du = lambda / cellsPerLambda;
+    DN = lambdaSize * lambda;
     DM = DN;
     M = round(DM / du);
     N = round(DN / du);

@@ -81,7 +81,11 @@ void PhyLayerRis::initialize(int stage)
             initMetasurface = new cMessage("initMetasurface");
             scheduleAt(initialConfigurationTime, initMetasurface);
 
-            ris = new ReconfigurableIntelligentSurface(centerFrequency);
+            codingStates = par("codingStates");
+            cellsPerLambda = par("cellsPerLambda");
+            lambdaSize = par("lambdaSize");
+
+            ris = new ReconfigurableIntelligentSurface(centerFrequency, codingStates, cellsPerLambda, lambdaSize);
             annotations = AnnotationManagerAccess().getIfExists();
 
             nodesAntennaHeight = par("nodesAntennaHeight");

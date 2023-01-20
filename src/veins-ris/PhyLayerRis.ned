@@ -91,4 +91,12 @@ simple PhyLayerRis extends BasePhyLayer
         // power below which a RIS will not reflect a signal (for optimization)
         double repropagationThreshold @unit(mW) = default(-100dBm);
 
+        // number of coding states (discretization of phase, n parameter)
+        int codingStates = default(2);
+        // number of unit cells per lambda
+        int cellsPerLambda = default(3);
+        // size of a side of the metasurface in units of lambda
+        // the total number of elements (assuming a square surfaces) is (lambdaSize * cellsPerLambda)^2
+        int lambdaSize = default(5);
+
 }

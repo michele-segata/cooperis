@@ -116,7 +116,13 @@ private:
 
 
 public:
-    ReconfigurableIntelligentSurface(double frequency, int n=2);
+    /**
+     * @param frequency frequency in Hz at which the surface is operating
+     * @param n number of states (discretization of phases)
+     * @param cellsPerLambda number of unit cells per lambda (wavelength)
+     * @param lambdaSize length of the side of the surface in units of lambda
+     */
+    ReconfigurableIntelligentSurface(double frequency, int n=2, int cellsPerLambda=3, int lambdaSize=5);
     virtual ~ReconfigurableIntelligentSurface();
 
     /**
