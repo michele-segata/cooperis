@@ -19,6 +19,8 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
+#include <cmath>
+
 #ifndef STANDALONE
 
 #include "veins/base/utils/Coord.h"
@@ -34,34 +36,6 @@ namespace veins {
 
 #endif
 
-
-// Angles get_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node, bool rightHanded)
-// {
-//
-//    Angles angles;
-//
-//    // move the origin to the center of the RIS
-//    Coord node_orig = node - ris_pos;
-//
-//    // project the node onto the plane given by v2 and vn (for azimuth phi)
-//    Coord proj_v2_vn = projection(ris_v1, node_orig);
-//    // compute the angle between vn and the projection
-//    angles.phi = -angle_3d(proj_v2_vn, ris_vn, ris_v1);
-//
-//    // rotate vn by phi around v1 (moves vn right below or above node)
-//    Coord vnr = rotate(ris_vn, ris_v1, angles.phi);
-//    // find the normal to the plane made by v1 and vnr
-//    Coord v1_vnr_n = cross(ris_v1, vnr);
-//
-//    // compute the angle between the node and vnr, on the plane characterized by v1 and vnr for theta
-//    angles.theta = angle_3d(node_orig, vnr, v1_vnr_n);
-//
-//    if (!rightHanded) angles.phi = -angles.phi;
-//
-//    return angles;
-//
-// }
-
 Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node)
 {
 
@@ -71,19 +45,19 @@ Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& r
 
     // project the node position onto the plane of the metasurface to compute the azimuth phi
     Coord node_surface_proj = projection(ris_vn, node_orig);
-    // to get the azimuth angle, measure the angle between the inverse of v1 and the projected node
-    Coord nris_v1 = {0, 0, 0};
-    nris_v1 -= ris_v1;
-    double phi = angle_3d(node_surface_proj, nris_v1, ris_vn);
+    // to get the azimuth angle, measure the angle between the inverse of v2 and the projected node
+    Coord nris_v2 = {0, 0, 0};
+    nris_v2 -= ris_v2;
+    double phi = angle_3d(node_surface_proj, nris_v2, ris_vn);
 
-    // invert rotation of the node by phi, so that the node is below vn
-    Coord derotated = rotate(node_orig, ris_vn, phi);
+    // invert rotation of the node by phi, so that the node is in the direction of -v2
+    Coord derotated = rotate(node_orig, ris_vn, -phi);
 
-    // measure the angle between the de-rotated node and vn
-    double theta = angle_3d(derotated, ris_vn, ris_v2);
+    // measure the angle between vn and the de-rotated node
+    double theta = angle_3d(ris_vn, derotated, ris_v1);
 
     angles.phi = phi;
-    angles.theta = -theta;
+    angles.theta = theta;
 
     return angles;
 
@@ -91,8 +65,8 @@ Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& r
 
 Coord spherical_point_beam(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, double phi, double theta)
 {
-    Coord byElevation = rotate(ris_vn, ris_v2, theta);
-    return rotate(byElevation, ris_vn, -phi);
+    Coord byElevation = rotate(ris_vn, ris_v1, -theta);
+    return rotate(byElevation, ris_vn, phi);
 }
 
 double angle_3d(const Coord& p1, const Coord& p2, const Coord& vn)
@@ -124,8 +98,10 @@ Coord cross(const Coord& p1, const Coord& p2)
     return c;
 }
 
-Coord rotate(const Coord& v, const Coord& axis, double angle)
+Coord rotate(const Coord& v, const Coord& axis, double angle, bool left_handed)
 {
+    if (left_handed)
+        angle = -angle;
     Coord v_cos_angle = v * cos(angle);
     Coord k_cross_v = cross(axis, v);
     k_cross_v *= sin(angle);

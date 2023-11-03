@@ -45,29 +45,29 @@ void PhyLayerRis::initialize(int stage)
         txPower = par("txPower");
         isRIS = par("isRIS");
 
-        ris_v2.x = par("ris_v2_x");
-        ris_v2.y = par("ris_v2_y");
-        ris_v2.z = par("ris_v2_z");
-
         ris_v1.x = par("ris_v1_x");
         ris_v1.y = par("ris_v1_y");
         ris_v1.z = par("ris_v1_z");
+
+        ris_v2.x = par("ris_v2_x");
+        ris_v2.y = par("ris_v2_y");
+        ris_v2.z = par("ris_v2_z");
 
         if (isRIS && ((ris_v2.squareLength() < 1e-6) || (ris_v1.squareLength() < 1e-6)))
             throw cRuntimeError("Cannot instantiate an RIS without setting the orientation vectors v2 and v1");
 
         if (isRIS) {
             // normalize vectors
-            double v2Len = ris_v2.length();
-            ris_v2.x /= v2Len;
-            ris_v2.y /= v2Len;
-            ris_v2.z /= v2Len;
             double v1Len = ris_v1.length();
             ris_v1.x /= v1Len;
             ris_v1.y /= v1Len;
             ris_v1.z /= v1Len;
+            double v2Len = ris_v2.length();
+            ris_v2.x /= v2Len;
+            ris_v2.y /= v2Len;
+            ris_v2.z /= v2Len;
             // compute facing direction
-            ris_vn = cross(ris_v2, ris_v1);
+            ris_vn = cross(ris_v1, ris_v2);
 
             initialConfigurationTime = par("initialConfigurationTime");
             focusBeamFrom = par("focusBeamFrom").stdstringValue();

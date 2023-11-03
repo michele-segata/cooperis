@@ -51,13 +51,12 @@ simple PhyLayerRis extends BasePhyLayer
         // vector v1 represents the other side of the RIS rectangle
         // notice that the orientation of the v1 and v2 vectors determine
         // the direction the RIS is facing (its reflective side).
-        // for example, if we define v2 = [-1 0 0] and v1 = [0 0 1]
+        // for example, if we define v1 = [1 0 0] and v2 = [0 0 -1]
         // we determine the direction the RIS is facing by computing
-        // the cross product between v2 and v1 (v2 x v1, AND NOT v1 x v2!)
-        // so we obtain v2 x v1 = [0 1 0], an RIS parallel to the x-z
+        // the cross product between v1 and v2
+        // so we obtain v1 x v2 = [0 1 0], an RIS parallel to the x-z
         // plane facing towards positive y values. intuitively, this
-        // can be computed using the right-hand rule (or better left-hand,
-        // as OMNeT is left-handed)
+        // can be computed using the right-hand rule
         double ris_v1_x = default(0);
         double ris_v1_y = default(0);
         double ris_v1_z = default(0);
@@ -92,7 +91,7 @@ simple PhyLayerRis extends BasePhyLayer
         double repropagationThreshold @unit(mW) = default(-100dBm);
 
         // number of coding states (discretization of phase, n parameter)
-        int codingStates = default(2);
+        int codingStates = default(4);
         // number of unit cells per lambda
         int cellsPerLambda = default(3);
         // size of a side of the metasurface in units of lambda

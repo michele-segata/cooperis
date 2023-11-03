@@ -136,20 +136,26 @@ struct Angles {
  * @param ris_vn normalized 3D vector indicating the normal of the surface (cross product between ris_v1 and ris_v2)
  * @param ris_pos position of the RIS
  * @param node position of the node
- * @param rightHanded whether we are considering a classical right handed coordinate system or a left handed one.
- * Set by default to false as omnet is left handed (y values increase moving south of the screen)
  * @return an Angles structure with the theta and phi angles between the node and the RIS
  */
-
-// Angles get_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node, bool rightHanded=false);
-
 Angles spherical_angles(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, const Coord& node);
 
+/**
+ * Given the position and the orientation of an RIS, phi and theta angles, returns the vector in the direction of the given angles
+ * @param ris_v1 normalized 3D vector indicating one side of the RIS (used to compute elevation)
+ * @param ris_v2 normalized 3D vector indicating the second side of the RIS (together with ris_v1, defines the surface
+ * plane of the RIS). v2 is used to compute the azimuth
+ * @param ris_vn normalized 3D vector indicating the normal of the surface (cross product between ris_v1 and ris_v2)
+ * @param ris_pos position of the RIS
+ * @param phi azimuth
+ * @param theta elevation
+ * @return a vector indicating the direction of (phi, theta) w.r.t. the RIS
+ */
 Coord spherical_point_beam(const Coord& ris_v1, const Coord& ris_v2, const Coord& ris_vn, const Coord& ris_pos, double phi, double theta);
 
 
 /**
- * Computes the angle between two 3D vectors assuming the lie on the same plane
+ * Computes the angle between two 3D vectors assuming they lie on the same plane
  * The plane is described using its normal vn
  */
 double angle_3d(const Coord& p1, const Coord& p2, const Coord& vn);
@@ -174,10 +180,12 @@ Coord cross(const Coord& p1, const Coord& p2);
  * Rotates a vector around a generic axis defined by a 3D unit vector
  * @param v vector to rotate
  * @param axis unit vector indicating the rotation axis
- * @param angle rotation angle in radians TODO: direction???
+ * @param angle rotation angle in radians
+ * @param left_handed whether considering a left handed coordinate system or not
+ * In a left handed system, rotation is clockwise, in a right handed system, counterclockwise
  * @return the rotated vector
  */
-Coord rotate(const Coord& v, const Coord& axis, double angle);
+Coord rotate(const Coord& v, const Coord& axis, double angle, bool left_handed=true);
 
 /**
  * Finds the scaling factor alpha of a direction vector representing the point of intersection with a given plane

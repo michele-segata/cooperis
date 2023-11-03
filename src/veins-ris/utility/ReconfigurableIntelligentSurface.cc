@@ -20,65 +20,76 @@
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_complex_math.h>
-#include <veins-ris/utility/ReconfigurableIntelligentSurface.h>
+#include <fstream>
+#include "ReconfigurableIntelligentSurface.h"
+#include "Utils.h"
 
-ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(double frequency, int n, int cellsPerLambda, int lambdaSize)
+#include <cmath>
+
+#define IS_ZERO(x) (std::abs(x) < 1e-10)
+
+ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(double frequency, int n, int cellsPerLambda, int lambdaSize, double efficiency, double d_theta, double d_phi)
 {
-
-    printf("ReconfigurableIntelligentSurface: freq=%f Hz, n=%d, cellsPerLambda=%d, lambdaSize=%d, totalCells=%f\n", frequency, n, cellsPerLambda, lambdaSize, pow(cellsPerLambda*lambdaSize, 2));
-    E = linspace(0, pow(2, n) - 1, pow(2, n));
-    gsl_vector_scale(E, M_PI_X_2 / pow(2, n));
+    p_tot = 0;
+    this->efficiency = efficiency;
+    this->d_theta = d_theta;
+    this->d_phi = d_phi;
+    min_phi = -M_PI + d_phi;
+    max_phi = M_PI;
+    phi_range = max_phi - min_phi;
+    min_theta = 0;
+    max_theta = M_PI / 2;
+    theta_range = max_theta - min_theta;
+    N_s = n;
+    rho_lambda = cellsPerLambda;
+    N_lambda = lambdaSize;
+//    printf("ReconfigurableIntelligentSurface: freq=%f Hz, n=%d, cellsPerLambda=%d, lambdaSize=%d, totalCells=%f\n", frequency, n, cellsPerLambda, lambdaSize, pow(cellsPerLambda*lambdaSize, 2));
+    // vector including the available phases depending on the number of states n
+    E = linspace(0, N_s - 1, N_s);
+    gsl_vector_scale(E, M_PI_X_2 / N_s);
+    // speed of light
     c = 299792458;
-    f = frequency;
-    lambda = c / f;
+    lambda = c / frequency;
     k = M_PI_X_2 / lambda;
+    // distance between reflecting elements
     du = lambda / cellsPerLambda;
+    // size of the surface in meters
     DN = lambdaSize * lambda;
     DM = DN;
+    // number of elements on the rows (M) and columns (N)
     M = round(DM / du);
     N = round(DN / du);
     du_k = du * k;
-    dG = du;
-    Ps = 361;
-    Ts = 91;
-    // phi = linspace(-1 * M_PI/180,M_PI,Ps);
-    // theta = linspace(-1 * M_PI/180,92*M_PI/180,Ts);
-    phi = linspace(0, M_PI_X_2, Ps);
+    // number of discrete values for phi and theta
+    Ps = round(M_PI_X_2 / d_phi);
+    Ts = round(M_PI_2 / d_theta) + 1;
+    phi = linspace(-M_PI + d_theta, M_PI, Ps);
     theta = linspace(0, M_PI_2, Ts);
-    Dt = gsl_vector_get(theta, 1) - gsl_vector_get(theta, 0); // theta[1] - theta[0];
-    Df = gsl_vector_get(phi, 1) - gsl_vector_get(phi, 0); // phi[1] - phi[0];
+    spherical_elements = new_vector(Ts);
+    for (int i = 0; i < Ts; i++)
+        gsl_vector_set(spherical_elements, i, spherical_element(gsl_vector_get(theta, i), d_theta, d_phi));
     cos_phi = matrix_from_vector(phi);
     apply_in_place(cos_phi, cos);
     sin_phi = matrix_from_vector(phi);
     apply_in_place(sin_phi, sin);
     sin_theta = matrix_from_vector(theta);
     apply_in_place(sin_theta, sin);
-    k_dG_sin_cos = new_matrix(Ts, Ps);
-    k_dG_sin_sin = new_matrix(Ts, Ps);
-    // k * dG * sin(theta)*cos(phi)^T
-    gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1, sin_theta, cos_phi, 0, k_dG_sin_cos);
-    gsl_matrix_scale(k_dG_sin_cos, k * dG);
+    k_du_sin_cos = new_matrix(Ts, Ps);
+    k_du_sin_sin = new_matrix(Ts, Ps);
+    // k * du * sin(theta) * cos(phi)^T
+    gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1, sin_theta, cos_phi, 0, k_du_sin_cos);
+    gsl_matrix_scale(k_du_sin_cos, du_k);
 
-    // k * dG * sin(theta)*sin(phi)^T
-    gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1, sin_theta, sin_phi, 0, k_dG_sin_sin);
-    gsl_matrix_scale(k_dG_sin_sin, k * dG);
+    // k * du * sin(theta) * sin(phi)^T
+    gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1, sin_theta, sin_phi, 0, k_du_sin_sin);
+    gsl_matrix_scale(k_du_sin_sin, du_k);
 
     GSL_REAL(C_0_M1j) = 0;
     GSL_IMAG(C_0_M1j) = -1;
 
-    wt = 1;
-
-    sin_abs_theta = matrix_from_vector(theta);
-    abs(sin_abs_theta);
-    apply_in_place(sin_abs_theta, sin);
-
-    phi_Dt_Df = matrix_from_vector(phi);
-    gsl_matrix_scale(phi_Dt_Df, Dt * Df);
-
     coding = new_matrix(M, N);
-    coding_alpha = new_matrix(M, N);
 
-    F2 = new_matrix(Ts, Ps);
+    P = new_matrix(Ts, Ps);
 
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
@@ -87,16 +98,14 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(double freque
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
 {
-    gsl_matrix_free(F2);
-    gsl_matrix_free(coding_alpha);
+    gsl_matrix_free(P);
     gsl_matrix_free(coding);
-    gsl_matrix_free(phi_Dt_Df);
-    gsl_matrix_free(sin_abs_theta);
-    gsl_matrix_free(k_dG_sin_sin);
-    gsl_matrix_free(k_dG_sin_cos);
+    gsl_matrix_free(k_du_sin_sin);
+    gsl_matrix_free(k_du_sin_cos);
     gsl_matrix_free(sin_theta);
     gsl_matrix_free(sin_phi);
     gsl_matrix_free(cos_phi);
+    gsl_vector_free(spherical_elements);
     gsl_vector_free(theta);
     gsl_vector_free(phi);
     gsl_vector_free(E);
@@ -104,10 +113,6 @@ ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
 
 void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
 {
-
-    // TODO: remove this when the model with incidence angle comes in
-//    phiI_rad = 0;
-//    thetaI_rad = 0;
 
     if (phiR_rad < KEEP_SAME_ANGLE)
         configPhiR = phiR_rad;
@@ -126,40 +131,26 @@ void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, dou
     else
         thetaI_rad = configThetaI;
 
-//    printf("Configuring metasurface for phiR=%.2f, thetaR=%.2f, phiI=%.2f, thetaI=%.2f\n", RAD_TO_DEG(phiR_rad), RAD_TO_DEG(thetaR_rad), RAD_TO_DEG(phiI_rad), RAD_TO_DEG(thetaI_rad));
+    // compute phase per-element phase shift for rows and columns
+    // compensate phase shift for incoming signal (-cos/sin)
+    // compensate phase shift for reflection (+cos/sin)
+    double dsx = du_k * (cos(phiR_rad) * sin(thetaR_rad) - cos(phiI_rad) * sin(thetaI_rad));
+    double dsy = du_k * (sin(phiR_rad) * sin(thetaR_rad) - sin(phiI_rad) * sin(thetaI_rad));
 
-    phiR_rad = REF_TO_MATH_PHI(phiR_rad);
-    thetaR_rad = REF_TO_MATH_THETA(thetaR_rad);
-    phiI_rad = REF_TO_MATH_PHI(phiI_rad);
-    thetaI_rad = REF_TO_MATH_THETA(thetaI_rad);
+    // PHI and coding are pointers, so we work on coding actually
+    Matrix PHI = coding;
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
 
-    double phiR = phiR_rad - M_PI;
-    double thetaR = thetaR_rad;
+            gsl_matrix_set(PHI, m, n, n * dsx + m * dsy);
+            // compute PHI(m, n) mod 2*PI to get a value between 0 and 2 PI
+            gsl_matrix_set(PHI, m, n, nmod(gsl_matrix_get(PHI, m, n), M_PI_X_2));
 
-    double dsx = du_k * (cos(phiR) * sin(thetaR) - sin(thetaI_rad) * cos(phiI_rad));
-    double dsy = du_k * (sin(phiR) * sin(thetaR) - sin(thetaI_rad) * sin(phiI_rad));
+            // find the nearest possible phase within the set of available ones (depending on the number of states)
+            size_t p = nearest_angle_pos(E, gsl_matrix_get(PHI, m, n));
 
-    // B and coding are pointers, so we work on coding actually
-    Matrix B = coding;
-    // same for alpha and coding_alpha
-    Matrix alpha = coding_alpha;
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            gsl_matrix_set(B, i, j, (i+1) * dsx + (j+1) * dsy);
-            gsl_matrix_set(alpha, i, j, M_PI_X_2 * ((i+1) * du * sin(thetaI_rad) * cos(phiI_rad) + (j + 1) * du * sin(thetaI_rad) * sin(phiI_rad)) / lambda);
-
-            gsl_matrix_set(B, i, j, fmod(gsl_matrix_get(B, i, j), M_PI_X_2));
-
-            Vector tmp = new_vector(E);
-            gsl_vector_add_constant(tmp, -std::abs(gsl_matrix_get(B, i, j)));
-            abs(tmp);
-            int p = min_pos(tmp);
-            gsl_vector_free(tmp);
-
-            if (gsl_matrix_get(B, i, j) < 0)
-                gsl_matrix_set(B, i, j, -gsl_vector_get(E, p));
-            else
-                gsl_matrix_set(B, i, j, gsl_vector_get(E, p));
+            // set the actual phase to the best available value
+            gsl_matrix_set(PHI, m, n, gsl_vector_get(E, p));
 
         }
     }
@@ -175,14 +166,11 @@ double ReconfigurableIntelligentSurface::cachedGain(double phiR_rad, double thet
     if (!(thetaR_rad >= 0 && thetaR_rad <= M_PI_2))
         return 0;
 
-    // convert the ranges
-    phiR_rad = REF_TO_MATH_PHI(phiR_rad);
-    thetaR_rad = REF_TO_MATH_THETA(thetaR_rad);
+    phiR_rad = fix_azimuth(phiR_rad);
 
-    int phi_deg = RAD_TO_DEG_ROUND(phiR_rad);
-    int theta_deg = RAD_TO_DEG_ROUND(thetaR_rad);
-    // * 0.9 is an efficiency factor that was applied in the original matlab script
-    return gsl_matrix_get(F2, theta_deg, phi_deg) * 4 * M_PI / v * 0.9;
+    size_t phi_idx = angle_to_index(phiR_rad, phi_range, min_phi, Ps);
+    size_t theta_idx = angle_to_index(thetaR_rad, theta_range, min_theta, Ts);
+    return gsl_matrix_get(P, theta_idx, phi_idx) * M_PI_X_2 / p_tot;
 }
 
 bool ReconfigurableIntelligentSurface::canUseCache(double phiI_rad, double thetaI_rad) const
@@ -194,75 +182,137 @@ bool ReconfigurableIntelligentSurface::canUseCache(double phiI_rad, double theta
     return true;
 }
 
-double ReconfigurableIntelligentSurface::gain(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
+size_t ReconfigurableIntelligentSurface::angle_to_index(double angle_rad, double angle_range_rad, double min_angle_rad, size_t n_angles)
+{
+    return lround((angle_rad - min_angle_rad) / angle_range_rad * (n_angles - 1));
+}
+
+double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
 
-    // TODO: remove this when the model with incidence angle comes in
-    phiI_rad = 0;
-    thetaI_rad = 0;
+    // fix the corner case in which phi is between -180 and -180 + d_phi/2
+    // the gain matrix (if d_phi = 1 degree) would have values from -179 to 180
+    // if phi = -179.8, for example, this will fall into the 180 degrees bin, as it is equivalent to 180.2 degrees
+    // the 180 degrees bin indeed goes from 179.5 to 180.5 degrees (for d_phi = 1 degree)
+    phiRX_rad = fix_azimuth(phiRX_rad);
+    phiTX_rad = fix_azimuth(phiTX_rad);
 
-    if (canUseCache(phiI_rad, thetaI_rad)) {
-        return cachedGain(phiR_rad, thetaR_rad);
+    if (canUseCache(phiTX_rad, thetaTX_rad)) {
+        return cachedGain(phiRX_rad, thetaRX_rad);
     }
 
     CMatrix phase = new_cmatrix(Ts, Ps);
 
-    Matrix B = coding;
-    Matrix alpha = coding_alpha;
-    for (int a = 0; a < M; a++) {
-        for (int b = 0; b < N; b++) {
-            Matrix a_0_5 = new_matrix(k_dG_sin_cos);
-            Matrix b_0_5 = new_matrix(k_dG_sin_sin);
-            gsl_matrix_scale(a_0_5, (a+1) - 0.5);
-            gsl_matrix_scale(b_0_5, (b+1) - 0.5);
-            gsl_matrix_add(a_0_5, b_0_5);
-            gsl_matrix_add_constant(a_0_5, gsl_matrix_get(alpha, a, b));
-            gsl_matrix_add_constant(a_0_5, gsl_matrix_get(B, a, b));
-            CMatrix complex_matrix = new_cmatrix(a_0_5);
+    Matrix PHI = coding;
+    double alpha;
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+            // compute the phase offset due to the incidence of the signal
+            alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
+            // compute the phase offsets for all the possible phiRX,thetaRX pairs
+            Matrix n_k_du_sin_cos = new_matrix(k_du_sin_cos);
+            Matrix m_k_du_sin_sin = new_matrix(k_du_sin_sin);
+            // scale by negative m and n, as these matrices need to be subtracted
+            gsl_matrix_scale(n_k_du_sin_cos, -n);
+            gsl_matrix_scale(m_k_du_sin_sin, -m);
+            gsl_matrix_add(n_k_du_sin_cos, m_k_du_sin_sin);
+            // add phase offset due to the position of the transmitter
+            gsl_matrix_add_constant(n_k_du_sin_cos, alpha);
+            // add phase offset due to coding
+            gsl_matrix_add_constant(n_k_du_sin_cos, gsl_matrix_get(PHI, m, n));
+            CMatrix complex_matrix = new_cmatrix(n_k_du_sin_cos);
             gsl_matrix_complex_scale(complex_matrix, C_0_M1j);
-            //            double phase = exp(-1j*(alpha(a,b)+PH(a,b) + k*dG*(a-0.5).*sin(theta*M_PI/180)'*cos(phi*M_PI/180) + k*dG*(b-0.5).*sin(theta*M_PI/180)'*sin(phi*M_PI/180)));%%
             exp(complex_matrix);
+            // compute final phases e^-j(...)
             gsl_matrix_complex_add(phase, complex_matrix);
 
             gsl_matrix_complex_free(complex_matrix);
-            gsl_matrix_free(a_0_5);
-            gsl_matrix_free(b_0_5);
+            gsl_matrix_free(n_k_du_sin_cos);
+            gsl_matrix_free(m_k_du_sin_sin);
         }
     }
 
+    // compute absolute value of all phases, i.e., length of all vectors
+    // if length = 0 then all signals were interfering destructively
+    // the longer the vector, the more constructively all the signals are summing up together
     Matrix Fa = abs(phase);
     gsl_matrix_complex_free(phase);
 
-    // F2 = Fa ^ 2
-    matrix_copy(F2, Fa);
-    gsl_matrix_mul_elements(F2, F2);
+    // P = Fa ^ 2
+    // compute the power by squaring the absolute values
+    matrix_copy(P, Fa);
+    gsl_matrix_mul_elements(P, P);
 
-    // F2^T * sin(abs(theta) * pi / 180)
-    Matrix F2_sin_abs_theta = new_matrix(F2->size2, sin_abs_theta->size2);
-    gsl_blas_dgemm(CblasTrans, CblasNoTrans, 1, F2, sin_abs_theta, 0, F2_sin_abs_theta);
+    // (P^T * 1)
+    Vector powers_by_theta = matrix_sum(P, true);
+    // (P^T * 1) * A(THETA, d_theta, d_phi)
+    p_tot = dot_product(powers_by_theta, spherical_elements);
 
-    Matrix vm = new_matrix(1, 1);
-    gsl_blas_dgemm(CblasTrans, CblasNoTrans, 1, F2_sin_abs_theta, phi_Dt_Df, 0, vm);
-    v = gsl_matrix_get(vm, 0, 0);
-
-    gsl_matrix_free(vm);
-    gsl_matrix_free(F2_sin_abs_theta);
-
+    gsl_vector_free(powers_by_theta);
     gsl_matrix_free(Fa);
 
     recomputeGainMap = false;
-    cached_phiI_deg = RAD_TO_DEG_ROUND(phiI_rad);
-    cached_thetaI_deg = RAD_TO_DEG_ROUND(thetaI_rad);
+    cached_phiI_deg = RAD_TO_DEG_ROUND(phiTX_rad);
+    cached_thetaI_deg = RAD_TO_DEG_ROUND(thetaTX_rad);
 
-    return cachedGain(phiR_rad, thetaR_rad);
+    return cachedGain(phiRX_rad, thetaRX_rad);
 }
 
-void ReconfigurableIntelligentSurface::getConfiguration(double& phiR_rad, double& thetaR_rad, double& phiI_rad, double& thetaI_rad)
+inline double ReconfigurableIntelligentSurface::fix_azimuth(double phi) const
+{
+    // fix the corner case in which phi is between -180 and -180 + d_phi/2
+    // the gain matrix (if d_phi = 1 degree) would have values from -179 to 180
+    // if phi = -179.8, for example, this will fall into the 180 degrees bin, as it is equivalent to 180.2 degrees
+    // the 180 degrees bin indeed goes from 179.5 to 180.5 degrees (for d_phi = 1 degree)
+    if (-M_PI <= phi < -M_PI + d_phi/2)
+        return M_PI;
+    else
+        return phi;
+}
+
+void ReconfigurableIntelligentSurface::getConfiguration(double& phiR_rad, double& thetaR_rad, double& phiI_rad, double& thetaI_rad) const
 {
     phiR_rad = configPhiR;
     phiI_rad = configPhiI;
     thetaR_rad = configThetaR;
     thetaI_rad = configThetaI;
+}
+
+double ReconfigurableIntelligentSurface::nmod(double x, double y) {
+    if (x < 0) {
+        double m1 = std::fmod(x, y);
+        // force 0 to avoid cases like (-1e-15 + y) mod y != 0
+        if (IS_ZERO(m1))
+            m1 = 0;
+        m1 += y;
+        double m2 = std::fmod(m1, y);
+        return m2;
+    }
+    else
+        return std::fmod(x, y);
+}
+
+double ReconfigurableIntelligentSurface::spherical_element(double theta, double d_theta, double d_phi)
+{
+    if (ANGLE_EQUALS(theta, 0)) {
+        return d_phi * (1 - cos(d_theta/2));
+    }
+    else if (ANGLE_EQUALS(theta, M_PI_2)) {
+        return d_phi * cos(theta - d_theta/2);
+    }
+    else {
+        return d_phi * (cos(theta - d_theta/2) - cos(theta + d_theta/2));
+    }
+}
+
+double ReconfigurableIntelligentSurface::dot_product(Vector a, Vector b)
+{
+    if (a->size != b->size)
+        return 0;
+    double sum = 0;
+    for (size_t i = 0; i < a->size; i++)
+        sum += gsl_vector_get(a, i) * gsl_vector_get(b, i);
+    return sum;
 }
 
 Vector ReconfigurableIntelligentSurface::linspace(double min, double max, int n)
@@ -273,7 +323,7 @@ Vector ReconfigurableIntelligentSurface::linspace(double min, double max, int n)
     return v;
 }
 
-Vector ReconfigurableIntelligentSurface::new_vector(int n, double value)
+Vector ReconfigurableIntelligentSurface::new_vector(size_t n, double value)
 {
     Vector v = gsl_vector_alloc(n);
     gsl_vector_set_all(v, value);
@@ -296,7 +346,7 @@ Matrix ReconfigurableIntelligentSurface::matrix_from_vector(Vector v)
     return m;
 }
 
-Matrix ReconfigurableIntelligentSurface::new_matrix(int rows, int columns, double value)
+Matrix ReconfigurableIntelligentSurface::new_matrix(size_t rows, size_t columns, double value)
 {
     Matrix m = gsl_matrix_alloc(rows, columns);
     gsl_matrix_set_all(m, value);
@@ -314,7 +364,7 @@ Matrix ReconfigurableIntelligentSurface::new_matrix(Matrix src)
     return m;
 }
 
-CMatrix ReconfigurableIntelligentSurface::new_cmatrix(int rows, int columns, gsl_complex value)
+CMatrix ReconfigurableIntelligentSurface::new_cmatrix(size_t rows, size_t columns, gsl_complex value)
 {
     CMatrix m = gsl_matrix_complex_alloc(rows, columns);
     gsl_matrix_complex_set_all(m, value);
@@ -382,11 +432,31 @@ Matrix ReconfigurableIntelligentSurface::abs(CMatrix m)
     return n;
 }
 
-int ReconfigurableIntelligentSurface::min_pos(Vector v)
+size_t ReconfigurableIntelligentSurface::min_pos(Vector v)
 {
     if (v->size == 0)
         return -1;
-    int pos = gsl_vector_min_index(v);
+    size_t pos = gsl_vector_min_index(v);
+    return pos;
+}
+
+double ReconfigurableIntelligentSurface::angle_distance(double a1, double a2) {
+    double d = nmod(a2 - a1 + M_PI, M_PI_X_2) - M_PI;
+    if (d < -M_PI)
+        return d + M_PI_X_2;
+    else
+        return d;
+}
+
+size_t ReconfigurableIntelligentSurface::nearest_angle_pos(Vector phases, double phase)
+{
+    Vector tmp = new_vector(phases);
+    for (size_t i = 0; i < tmp->size; i++)
+        // set tmp[i] = distance(phases[i], phase)
+        gsl_vector_set(tmp, i, angle_distance(gsl_vector_get(tmp, i), phase));
+    abs(tmp);
+    size_t pos = min_pos(tmp);
+    gsl_vector_free(tmp);
     return pos;
 }
 
@@ -395,8 +465,37 @@ void ReconfigurableIntelligentSurface::exp(CMatrix m)
     for (int r = 0; r < m->size1; r++)
         for (int c = 0; c < m->size2; c++)
             gsl_matrix_complex_set(m, r, c, gsl_complex_exp(gsl_matrix_complex_get(m, r, c)));
+}
 
+double ReconfigurableIntelligentSurface::matrix_sum(Matrix m)
+{
+    double sum = 0;
+    for (int r = 0; r < m->size1; r++)
+        for (int c = 0; c < m->size2; c++)
+            sum += gsl_matrix_get(m, r, c);
+    return sum;
+}
 
+Vector ReconfigurableIntelligentSurface::matrix_sum(Matrix m, bool by_row)
+{
+    Vector sum;
+    if (by_row) {
+        sum = new_vector(m->size1);
+    }
+    else {
+        sum = new_vector(m->size2);
+    }
+    for (int r = 0; r < m->size1; r++) {
+        for (int c = 0; c < m->size2; c++) {
+            if (by_row) {
+                gsl_vector_set(sum, r, gsl_vector_get(sum, r) + gsl_matrix_get(m, r, c));
+            }
+            else {
+                gsl_vector_set(sum, c, gsl_vector_get(sum, c) + gsl_matrix_get(m, r, c));
+            }
+        }
+    }
+    return sum;
 }
 
 void ReconfigurableIntelligentSurface::print_matrix(Matrix m) {
@@ -422,4 +521,35 @@ void ReconfigurableIntelligentSurface::print_vector(Vector v) {
     for (int c = 0; c < v->size; c++)
         printf("%+.4f ", gsl_vector_get(v, c));
     printf("\n");
+}
+
+const Matrix& ReconfigurableIntelligentSurface::getPhases() const {
+    return coding;
+}
+
+const Matrix& ReconfigurableIntelligentSurface::getGains(double &p_tot, double phiTX_rad, double thetaTX_rad) {
+    gain(0, 0, phiTX_rad, thetaTX_rad);
+    p_tot = this->p_tot;
+    return P;
+}
+
+void ReconfigurableIntelligentSurface::writeGains(string prefix, double phiTX_rad, double thetaTX_rad) {
+    ofstream f;
+    stringstream ss;
+    char output_fname[500];
+    sprintf(output_fname, "%s_phiR_%f_thetaR_%f_phiI_%f_thetaI_%f_phiTX_%f_thetaTX_%f_n_%d_pl_%d_nl_%d.csv",
+            prefix.c_str(), RAD_TO_DEG(configPhiR), RAD_TO_DEG(configThetaR), RAD_TO_DEG(configPhiI), RAD_TO_DEG(configThetaI),
+            RAD_TO_DEG(phiTX_rad), RAD_TO_DEG(thetaTX_rad), N_s, rho_lambda, N_lambda);
+    f.open(output_fname, ios::out);
+
+    f << "phi,theta,gain\n";
+    for (int phi = 180; phi >= -179; phi--) {
+        for (int theta = 0; theta <= 90; theta++) {
+            double phi_rad = DEG_TO_RAD(phi);
+            double theta_rad = DEG_TO_RAD(theta);
+            double g = gain(phi_rad, theta_rad, phiTX_rad, thetaTX_rad);
+            f << phi << "," << theta << "," << g << "\n";
+        }
+    }
+    f.close();
 }

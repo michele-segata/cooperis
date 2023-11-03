@@ -99,7 +99,9 @@ protected:
     Coord ris_v2;
     Coord ris_v1;
     // vector indicating the direction the RIS is facing
-    // compute as the cross product between v2 and v1
+    // compute as the cross product between v1 and v2
+    // cross product is between v1 and v2 as a convention, so that if x axis is v1 and negative z axis is v2,
+    // then vn = v1 x v2 = y axis
     Coord ris_vn;
 
     double initialConfigurationTime = 1e-6;
@@ -111,7 +113,7 @@ protected:
     double initialReflectionTheta = 0;
     string destinationNodeToTrack = "";
 
-    int codingStates = 2;
+    int codingStates = 4;
     int cellsPerLambda = 3;
     int lambdaSize = 5;
 

@@ -33,40 +33,18 @@ typedef gsl_matrix_complex* CMatrix;
 
 #define M_PI_X_2 (2*M_PI)
 
-//#define RIS_AZIMUTH_RIGHT 0
-//#define RIS_AZIMUTH_CENTER (M_PI_2)
-//#define RIS_AZIMUTH_LEFT (M_PI)
-//#define RIS_ELEVATION_BOTTOM 0
-//#define RIS_ELEVATION_MIDDLE (M_PI_2)
-//#define RIS_ELEVATION_ABOVE (M_PI)
-
-//#define RIS_AZIMUTH_RIGHT (-M_PI_2)
-//#define RIS_AZIMUTH_CENTER 0
-//#define RIS_AZIMUTH_LEFT M_PI_2
-//#define RIS_ELEVATION_BOTTOM (-M_PI_2)
-//#define RIS_ELEVATION_MIDDLE 0
-//#define RIS_ELEVATION_ABOVE M_PI_2
-
-//// in the math scripts the range goes from 0 to 180 both for azimuth and elevation
-//// in the code we consider -90 (below and right) to 90 (above and left)
-//#define REF_TO_MATH(x) (x+M_PI_2)
-
-// theta goes from 0 to 90 both in the code and in the model
-#define REF_TO_MATH_THETA(x) (x)
-// phi goes from -180 to 180 in the code, but from 0 to 360 in the model
-#define REF_TO_MATH_PHI(x) (x+M_PI)
-
-#define RAD_TO_DEG(x) (x*180/M_PI)
-#define RAD_TO_DEG_ROUND(x) (std::round(x*180/M_PI))
-#define DEG_TO_RAD(x) (x*M_PI/180)
+#define RAD_TO_DEG(x) ((x)*180/M_PI)
+#define RAD_TO_DEG_ROUND(x) (std::round((x)*180/M_PI))
+#define DEG_TO_RAD(x) ((x)*M_PI/180)
 
 #define KEEP_SAME_ANGLE 10000
+
+#define ANGLE_EQUALS(x, y) (std::abs((x)-(y)) < 1e-9)
 
 class ReconfigurableIntelligentSurface {
 
 protected:
-    double f;
-    double n;
+    double efficiency;
 
     double configPhiR = 0, configThetaR = 0, configPhiI = 0, configThetaI = 0;
 
@@ -76,6 +54,13 @@ protected:
     double cachedGain(double phiR_rad, double thetaR_rad) const;
 
 private:
+    // stored parameters
+    // total number of states (number of available phases)
+    int N_s;
+    // size of the side of the RIS in multiples of lambda
+    int N_lambda;
+    // number of reflecting elements per lambda
+    int rho_lambda;
     // set of pre-initialized variables that can be used multiple times
     Vector E;
     double c;
@@ -86,33 +71,32 @@ private:
     double DM;
     int M, N;
     double du_k;
-    double dG;
     int Ps;
     int Ts;
     Vector phi;
     Vector theta;
-    double Dt;
-    double Df;
+    double d_theta;
+    double d_phi;
+    double min_phi, max_phi;
+    double min_theta, max_theta;
+    double phi_range, theta_range;
+    Vector spherical_elements;
     Matrix cos_phi;
     Matrix sin_theta;
     Matrix sin_phi;
-    Matrix k_dG_sin_cos;
-    Matrix k_dG_sin_sin;
+    Matrix k_du_sin_cos;
+    Matrix k_du_sin_sin;
     // 0 - 1j
-    gsl_complex C_0_M1j;
-    double wt;
-    Matrix sin_abs_theta;
-    Matrix phi_Dt_Df;
+    gsl_complex C_0_M1j{};
 
     // matrices holding the coding of the metasurface (state)
     Matrix coding;
-    Matrix coding_alpha;
     // matrix and value caching the gains
     // gains are cached for a specific coding and a specific incidence angle
-    Matrix F2;
-    double v;
-    int cached_phiI_deg;
-    int cached_thetaI_deg;
+    Matrix P;
+    double p_tot{};
+    int cached_phiI_deg{};
+    int cached_thetaI_deg{};
 
 
 public:
@@ -121,8 +105,9 @@ public:
      * @param n number of states (discretization of phases)
      * @param cellsPerLambda number of unit cells per lambda (wavelength)
      * @param lambdaSize length of the side of the surface in units of lambda
+     * @param efficiency reflective efficiency of the surface
      */
-    ReconfigurableIntelligentSurface(double frequency, int n=2, int cellsPerLambda=3, int lambdaSize=5);
+    ReconfigurableIntelligentSurface(double frequency, int n=2, int cellsPerLambda=3, int lambdaSize=5, double efficiency=1.0, double d_theta=M_PI/180, double d_phi=M_PI/180);
     virtual ~ReconfigurableIntelligentSurface();
 
     /**
@@ -137,26 +122,74 @@ public:
 
     /**
      * Computes the gain of the antenna given a specific pair of incidence and reflection angles
-     * @param phiR_rad the reflection angle phi (azimuth) in radians
-     * @param thetaR_rad the reflection angle theta (elevation) in radians
-     * @param phiI_rad the incidence angle phi (azimuth) in radians
-     * @param thetaI_rad the incidence angle theta (elevation) in radians
+     * @param phiRX_rad the reflection angle phi (azimuth) in radians
+     * @param thetaRX_rad the reflection angle theta (elevation) in radians
+     * @param phiTX_rad the incidence angle phi (azimuth) in radians
+     * @param thetaTX_rad the incidence angle theta (elevation) in radians
      * @return linear gain of the RIS
      */
-    double gain(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad);
+    double gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad);
 
     /**
      * Returns the incidence and reflection angles for which the metasurface has been configured
      */
-    void getConfiguration(double& phiR_rad, double& thetaR_rad, double& phiI_rad, double& thetaI_rad);
+    void getConfiguration(double& phiR_rad, double& thetaR_rad, double& phiI_rad, double& thetaI_rad) const;
+
+    /**
+     * Returns the matrix of phases assigned to the elements after running the configuration
+     */
+    const Matrix& getPhases() const;
+
+    /**
+     * Returns the matrix of gains after running the configuration
+     * @param p_tot total power of the surface. The actual gain is P * 2 * pi / p_tot
+     * @param phiTX_rad azimuth of the transmitter
+     * @param thetaTX_rad elevation of the transmitter
+     */
+    const Matrix& getGains(double& p_tot, double phiTX_rad, double thetaTX_rad);
+
+    /**
+     * Returns the area of the spherical element at elevation theta, given the angular resolutions d_theta and d_phi
+     * The element is considered to be centered in theta, +- d_theta/2
+     * @param theta angle theta in radians
+     * @param d_theta theta resolution in radians
+     * @param d_phi phi resolution in radians
+     */
+    static double spherical_element(double theta, double d_theta, double d_phi);
+
+    static double dot_product(Vector a, Vector b);
+
+    void writeGains(string filename, double phiTX_rad, double thetaTX_rad);
+
+    /**
+     * Computes the modulo operation with negative dividend. The operations is the same as making the dividend positive
+     * first and then computing the normal modulo operation. E.g., -7 mod 6 = (-7 + 6 + 6) mod 6 = 1
+     * @param x dividend
+     * @param y divisor
+     * @return the modulo between x and y
+     */
+    static double nmod(double x, double y);
+
+    inline double fix_azimuth(double phi) const;
+
+    /**
+     * Converts an angle into an integer index for the matrix of gains. Sample parameters for azimuth:
+     * if d_phi = 0.5 degrees then min = -179.5, max=180 (range = 359.5 degrees), n_angles = 720
+     * @param angle_rad angle to convert
+     * @param angle_range_rad range of angles in the matrix (max - min)
+     * @param min_angle_rad minimum angle in the matrix
+     * @param n_angles number of angles
+     * @return the index for the given angle inside the matrix
+     */
+    static size_t angle_to_index(double angle_rad, double angle_range_rad, double min_angle_rad, size_t n_angles);
 
     static Vector linspace(double start, double end, int n);
-    static Vector new_vector(int n, double value = 0);
+    static Vector new_vector(size_t n, double value = 0);
     static Vector new_vector(Vector src);
     static Matrix matrix_from_vector(Vector v);
-    static Matrix new_matrix(int rows, int columns, double value = 0);
+    static Matrix new_matrix(size_t rows, size_t columns, double value = 0);
     static Matrix new_matrix(Matrix src);
-    static CMatrix new_cmatrix(int rows, int columns, gsl_complex value = {0, 0});
+    static CMatrix new_cmatrix(size_t rows, size_t columns, gsl_complex value = {0, 0});
     static CMatrix new_cmatrix(Matrix src);
     static void matrix_to_cmatrix(CMatrix dst, const Matrix src);
     static void matrix_copy(Matrix dst, const Matrix src);
@@ -164,8 +197,12 @@ public:
     static void abs(Vector v);
     static void abs(Matrix m);
     static Matrix abs(CMatrix m);
-    static int min_pos(Vector v);
+    static size_t min_pos(Vector v);
+    static double angle_distance(double a1, double a2);
+    static size_t nearest_angle_pos(Vector phases, double phase);
     static void exp(CMatrix m);
+    static double matrix_sum(Matrix m);
+    static Vector matrix_sum(Matrix m, bool by_row);
     static void print_matrix(Matrix m);
     static void print_matrix(CMatrix m);
     static void print_vector(Vector v);
