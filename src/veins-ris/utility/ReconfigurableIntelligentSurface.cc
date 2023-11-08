@@ -264,7 +264,7 @@ inline double ReconfigurableIntelligentSurface::fix_azimuth(double phi) const
     // the gain matrix (if d_phi = 1 degree) would have values from -179 to 180
     // if phi = -179.8, for example, this will fall into the 180 degrees bin, as it is equivalent to 180.2 degrees
     // the 180 degrees bin indeed goes from 179.5 to 180.5 degrees (for d_phi = 1 degree)
-    if (-M_PI <= phi < -M_PI + d_phi/2)
+    if (-M_PI <= phi && phi < -M_PI + d_phi/2)
         return M_PI;
     else
         return phi;
