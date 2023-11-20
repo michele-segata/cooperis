@@ -19,13 +19,13 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include "veins-ris/mac/MacLayerRis.h"
+#include "cooperis/mac/MacLayerRis.h"
 
 #include "veins/base/phyLayer/PhyToMacControlInfo.h"
 #include "veins/base/phyLayer/MacToPhyInterface.h"
 #include "veins/base/messages/MacPkt_m.h"
-#include "veins-ris/PhyLayerRis.h"
-#include "veins-ris/DeciderResultRis.h"
+#include "cooperis/PhyLayerRis.h"
+#include "cooperis/DeciderResultRis.h"
 
 using namespace veins;
 

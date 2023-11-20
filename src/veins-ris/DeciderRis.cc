@@ -19,15 +19,15 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include "veins-ris/DeciderRis.h"
-#include "veins-ris/DeciderResultRis.h"
+#include "cooperis/DeciderRis.h"
+#include "cooperis/DeciderResultRis.h"
 #include "veins/modules/phy/NistErrorRate.h"
 #include "veins/base/toolbox/Signal.h"
-#include "veins-ris/messages/AirFrameRis_m.h"
+#include "cooperis/messages/AirFrameRis_m.h"
 #include "veins/modules/utility/ConstsPhy.h"
 
 #include "veins/modules/utility/Consts80211p.h"
-#include "veins-ris/utility/Utils.h"
+#include "cooperis/utility/Utils.h"
 #include "veins/base/utils/FWMath.h"
 
 #include "veins/base/toolbox/SignalUtils.h"

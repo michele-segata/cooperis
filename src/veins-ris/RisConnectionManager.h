@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "veins-ris/veins-ris.h"
+#include "cooperis/cooperis.h"
 
 #include "veins/base/connectionManager/BaseConnectionManager.h"
 
@@ -37,7 +37,7 @@ namespace veins {
  *
  * @ingroup connectionManager
  */
-class VEINS_RIS_API RisConnectionManager : public BaseConnectionManager {
+class COOPERIS_API RisConnectionManager : public BaseConnectionManager {
 protected:
     /**
      * @brief Calculate interference distance

@@ -24,7 +24,7 @@
 #ifndef STANDALONE
 
 #include "veins/base/utils/Coord.h"
-#include "veins-ris/utility/Utils.h"
+#include "cooperis/utility/Utils.h"
 
 using namespace veins;
 

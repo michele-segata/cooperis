@@ -51,9 +51,9 @@ if options.gslinc is None or options.gsllib is None:
     sys.exit(1)
 
 # Start with default flags
-makemake_flags = ['-f', '--deep', '--no-deep-includes', '--make-so', '-I', '.', '-o', 'veins-ris', '-O', 'out', '-p', 'VEINS_RIS', '-I', options.gslinc, '-lgsl', '-lgslcblas', '-lm']
-run_libs = [os.path.join('src', 'veins-ris'), options.gsllib]
-run_neds = [os.path.join('src', 'veins-ris')]
+makemake_flags = ['-f', '--deep', '--no-deep-includes', '--make-so', '-I', '.', '-o', 'cooperis', '-O', 'out', '-p', 'COOPERIS', '-I', options.gslinc, '-lgsl', '-lgslcblas', '-lm']
+run_libs = [os.path.join('src', 'cooperis'), options.gsllib]
+run_neds = [os.path.join('src', 'cooperis')]
 run_imgs = [os.path.join('images')]
 
 

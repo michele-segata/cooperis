@@ -23,16 +23,16 @@
 
 #include <cassert>
 
-#include "veins-ris/veins-ris.h"
+#include "cooperis/cooperis.h"
 
 #include "veins/base/phyLayer/AnalogueModel.h"
 #include "veins/modules/mobility/traci/TraCIMobility.h"
 #include "veins/modules/world/annotations/AnnotationManager.h"
-#include "veins-ris/utility/Utils.h"
+#include "cooperis/utility/Utils.h"
 
-#include "veins-ris/PhyLayerRis.h"
-#include "veins-ris/FrameAnalogueModel.h"
-#include "veins-ris/messages/AirFrameRis_m.h"
+#include "cooperis/PhyLayerRis.h"
+#include "cooperis/FrameAnalogueModel.h"
+#include "cooperis/messages/AirFrameRis_m.h"
 
 
 using veins::AirFrame;
@@ -49,7 +49,7 @@ namespace veins {
  *
  */
 
-class VEINS_RIS_API RisPathLoss : public SimplePathlossModel, public FrameAnalogueModel {
+class COOPERIS_API RisPathLoss : public SimplePathlossModel, public FrameAnalogueModel {
 protected:
     AnnotationManager* annotations;
 

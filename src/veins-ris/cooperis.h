@@ -24,21 +24,21 @@
 #include "veins/veins.h"
 
 // Version number of last release ("major.minor.patch") or an alpha version, if nonzero
-#define VEINS_RIS_VERSION_MAJOR 1
-#define VEINS_RIS_VERSION_MINOR 0
-#define VEINS_RIS_VERSION_PATCH 0
-#define VEINS_RIS_VERSION_ALPHA 0
+#define COOPERIS_VERSION_MAJOR 1
+#define COOPERIS_VERSION_MINOR 0
+#define COOPERIS_VERSION_PATCH 0
+#define COOPERIS_VERSION_ALPHA 0
 
 // Explicitly check Veins version number
 #if !(VEINS_VERSION_MAJOR == 5 && VEINS_VERSION_MINOR >= 0)
 #error Veins version 5.0 or compatible required
 #endif
 
-// VEINS_RIS_API macro. Allows us to use the same .h files for both building a .dll and linking against it
-#if defined(VEINS_RIS_EXPORT)
-#define VEINS_RIS_API OPP_DLLEXPORT
-#elif defined(VEINS_RIS_IMPORT)
-#define VEINS_RIS_API OPP_DLLIMPORT
+// COOPERIS_API macro. Allows us to use the same .h files for both building a .dll and linking against it
+#if defined(COOPERIS_EXPORT)
+#define COOPERIS_API OPP_DLLEXPORT
+#elif defined(COOPERIS_IMPORT)
+#define COOPERIS_API OPP_DLLIMPORT
 #else
-#define VEINS_RIS_API
+#define COOPERIS_API
 #endif

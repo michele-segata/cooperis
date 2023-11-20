@@ -19,7 +19,7 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-package org.car2x.veinsris;
+package org.car2x.cooperis;
 
 import org.car2x.veins.base.phyLayer.BasePhyLayer;
 

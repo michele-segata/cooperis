@@ -19,7 +19,7 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include "veins-ris/RisConnectionManager.h"
+#include "cooperis/RisConnectionManager.h"
 
 #include <cmath>
 

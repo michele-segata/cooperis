@@ -24,15 +24,15 @@
 #include "veins/base/phyLayer/BasePhyLayer.h"
 #include "veins/base/toolbox/Spectrum.h"
 #include "veins/modules/mac/ieee80211p/Mac80211pToPhy11pInterface.h"
-#include "veins-ris/DeciderRis.h"
-#include "veins-ris/utility/ReconfigurableIntelligentSurface.h"
+#include "cooperis/DeciderRis.h"
+#include "cooperis/utility/ReconfigurableIntelligentSurface.h"
 #include "veins/modules/analogueModel/SimplePathlossModel.h"
 #include "veins/base/connectionManager/BaseConnectionManager.h"
 #include "veins/modules/phy/Decider80211pToPhy80211pInterface.h"
 #include "veins/base/utils/Move.h"
 #include "veins/modules/world/annotations/AnnotationManager.h"
-#include "veins-ris/messages/AirFrameRis_m.h"
-#include "veins-ris/utility/Utils.h"
+#include "cooperis/messages/AirFrameRis_m.h"
+#include "cooperis/utility/Utils.h"
 
 namespace veins {
 

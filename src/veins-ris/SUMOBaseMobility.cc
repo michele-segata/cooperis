@@ -19,7 +19,7 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include "veins-ris/SUMOBaseMobility.h"
+#include "cooperis/SUMOBaseMobility.h"
 #include "veins/base/utils/FindModule.h"
 #include <sstream>
 using namespace std;

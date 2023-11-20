@@ -30,7 +30,7 @@
 #include "veins/base/utils/Move.h"
 #include "veins/base/messages/AirFrame_m.h"
 #include "veins/modules/analogueModel/SimpleObstacleShadowing.h"
-#include "veins-ris/FrameAnalogueModel.h"
+#include "cooperis/FrameAnalogueModel.h"
 
 using veins::AirFrame;
 using veins::ObstacleControl;

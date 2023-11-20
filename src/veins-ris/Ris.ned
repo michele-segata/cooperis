@@ -19,11 +19,11 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-package org.car2x.veinsris;
+package org.car2x.cooperis;
 
 import org.car2x.veins.base.modules.*;
-import org.car2x.veinsris.SUMOBaseMobility;
-import org.car2x.veinsris.NicRis;
+import org.car2x.cooperis.SUMOBaseMobility;
+import org.car2x.cooperis.NicRis;
 
 module Ris
 {

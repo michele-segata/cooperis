@@ -19,7 +19,7 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include "veins-ris/analogueModel/VehicleObstacleShadowingForVlc.h"
+#include "cooperis/analogueModel/VehicleObstacleShadowingForVlc.h"
 
 using namespace veins;
 

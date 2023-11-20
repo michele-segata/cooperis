@@ -21,7 +21,7 @@
 //
 
 #include "SimpleObstacleShadowingRis.h"
-#include "veins-ris/messages/AirFrameRis_m.h"
+#include "cooperis/messages/AirFrameRis_m.h"
 
 using namespace veins;
 

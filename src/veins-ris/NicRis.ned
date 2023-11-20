@@ -19,10 +19,10 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-package org.car2x.veinsris;
+package org.car2x.cooperis;
 
-import org.car2x.veinsris.mac.MacLayerRis;
-import org.car2x.veinsris.PhyLayerRis;
+import org.car2x.cooperis.mac.MacLayerRis;
+import org.car2x.cooperis.PhyLayerRis;
 
 module NicRis
 {

@@ -19,7 +19,7 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-package org.car2x.veinsris.mac;
+package org.car2x.cooperis.mac;
 
 import org.car2x.veins.base.modules.BaseMacLayer;
 

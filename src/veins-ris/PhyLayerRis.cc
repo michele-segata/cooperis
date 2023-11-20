@@ -20,14 +20,14 @@
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
 #include "veins/veins.h"
-#include "veins-ris/PhyLayerRis.h"
+#include "cooperis/PhyLayerRis.h"
 
-#include "veins-ris/analogueModel/VehicleObstacleShadowingForVlc.h"
+#include "cooperis/analogueModel/VehicleObstacleShadowingForVlc.h"
 #include "veins/base/connectionManager/BaseConnectionManager.h"
 #include "veins/base/toolbox/Spectrum.h"
-#include "veins-ris/analogueModel/RisPathLoss.h"
-#include "veins-ris/analogueModel/SimplePathlossModelRis.h"
-#include "veins-ris/analogueModel/SimpleObstacleShadowingRis.h"
+#include "cooperis/analogueModel/RisPathLoss.h"
+#include "cooperis/analogueModel/SimplePathlossModelRis.h"
+#include "cooperis/analogueModel/SimpleObstacleShadowingRis.h"
 
 #include <memory>
 

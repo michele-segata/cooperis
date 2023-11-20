@@ -22,7 +22,7 @@
 #pragma once
 
 #include "veins/base/phyLayer/BaseDecider.h"
-#include "veins-ris/PhyLayerRis.h"
+#include "cooperis/PhyLayerRis.h"
 
 namespace veins {
 

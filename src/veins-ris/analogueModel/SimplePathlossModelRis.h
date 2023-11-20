@@ -25,8 +25,8 @@
 
 #include "veins/veins.h"
 #include "veins/modules/analogueModel/SimplePathlossModel.h"
-#include "veins-ris/FrameAnalogueModel.h"
-#include "veins-ris/PhyLayerRis.h"
+#include "cooperis/FrameAnalogueModel.h"
+#include "cooperis/PhyLayerRis.h"
 
 namespace veins {
 

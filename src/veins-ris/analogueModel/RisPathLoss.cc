@@ -19,11 +19,11 @@
 //
 // Base files derived from Veins VLC by Agon Memedi and contributors
 
-#include <veins-ris/analogueModel/RisPathLoss.h>
+#include <cooperis/analogueModel/RisPathLoss.h>
 #include <limits>
 
 #include "veins/base/messages/AirFrame_m.h"
-#include "veins-ris/messages/AirFrameRis_m.h"
+#include "cooperis/messages/AirFrameRis_m.h"
 
 using namespace veins;
 

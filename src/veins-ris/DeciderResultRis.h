@@ -24,7 +24,7 @@
 #include "veins/veins.h"
 
 #include "veins/modules/phy/DeciderResult80211.h"
-#include "veins-ris/messages/AirFrameRis_m.h"
+#include "cooperis/messages/AirFrameRis_m.h"
 
 namespace veins {
 
