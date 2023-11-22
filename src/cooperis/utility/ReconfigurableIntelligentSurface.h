@@ -121,6 +121,26 @@ public:
     void configureMetaSurface(double phiR_rad=KEEP_SAME_ANGLE, double thetaR_rad=KEEP_SAME_ANGLE, double phiI_rad=KEEP_SAME_ANGLE, double thetaI_rad=KEEP_SAME_ANGLE);
 
     /**
+     * Computes and returns the phases to be applied to optimize the reflection for a specific pair of incidence and reflection angles
+     * @param phases matrix where to store the computed phases. This must be pre-allocated
+     * @param phiR_rad the reflection angle phi (azimuth) in radians
+     * @param thetaR_rad the reflection angle theta (elevation) in radians
+     * @param phiI_rad the incidence angle phi (azimuth) in radians
+     * @param thetaI_rad the incidence angle theta (elevation) in radians
+     */
+    void computePhases(Matrix phases, double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad);
+
+    /**
+     * Computes and returns the phases to be applied to optimize the reflection for a specific pair of incidence and reflection angles
+     * @param phiR_rad the reflection angle phi (azimuth) in radians
+     * @param thetaR_rad the reflection angle theta (elevation) in radians
+     * @param phiI_rad the incidence angle phi (azimuth) in radians
+     * @param thetaI_rad the incidence angle theta (elevation) in radians
+     * @return matrix of computed phases. This is allocated by the method and should be freed by the user with gsl_matrix_free
+     */
+    Matrix computePhases(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad);
+
+    /**
      * Computes the gain of the antenna given a specific pair of incidence and reflection angles
      * @param phiRX_rad the reflection angle phi (azimuth) in radians
      * @param thetaRX_rad the reflection angle theta (elevation) in radians

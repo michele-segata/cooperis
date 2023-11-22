@@ -111,6 +111,40 @@ ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
     gsl_vector_free(E);
 }
 
+void ReconfigurableIntelligentSurface::computePhases(Matrix phases, double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
+{
+    // compute phase per-element phase shift for rows and columns
+    // compensate phase shift for incoming signal (-cos/sin)
+    // compensate phase shift for reflection (+cos/sin)
+    double dsx = du_k * (cos(phiR_rad) * sin(thetaR_rad) - cos(phiI_rad) * sin(thetaI_rad));
+    double dsy = du_k * (sin(phiR_rad) * sin(thetaR_rad) - sin(phiI_rad) * sin(thetaI_rad));
+
+    // PHI and coding are pointers, so we work on coding actually
+    Matrix PHI = phases;
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+
+            gsl_matrix_set(PHI, m, n, n * dsx + m * dsy);
+            // compute PHI(m, n) mod 2*PI to get a value between 0 and 2 PI
+            gsl_matrix_set(PHI, m, n, nmod(gsl_matrix_get(PHI, m, n), M_PI_X_2));
+
+            // find the nearest possible phase within the set of available ones (depending on the number of states)
+            size_t p = nearest_angle_pos(E, gsl_matrix_get(PHI, m, n));
+
+            // set the actual phase to the best available value
+            gsl_matrix_set(PHI, m, n, gsl_vector_get(E, p));
+
+        }
+    }
+}
+
+Matrix ReconfigurableIntelligentSurface::computePhases(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
+{
+    Matrix phases = new_matrix(M, N);
+    computePhases(phases, phiR_rad, thetaR_rad, phiI_rad, thetaI_rad);
+    return phases;
+}
+
 void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
 {
 
@@ -131,29 +165,7 @@ void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, dou
     else
         thetaI_rad = configThetaI;
 
-    // compute phase per-element phase shift for rows and columns
-    // compensate phase shift for incoming signal (-cos/sin)
-    // compensate phase shift for reflection (+cos/sin)
-    double dsx = du_k * (cos(phiR_rad) * sin(thetaR_rad) - cos(phiI_rad) * sin(thetaI_rad));
-    double dsy = du_k * (sin(phiR_rad) * sin(thetaR_rad) - sin(phiI_rad) * sin(thetaI_rad));
-
-    // PHI and coding are pointers, so we work on coding actually
-    Matrix PHI = coding;
-    for (int m = 0; m < M; m++) {
-        for (int n = 0; n < N; n++) {
-
-            gsl_matrix_set(PHI, m, n, n * dsx + m * dsy);
-            // compute PHI(m, n) mod 2*PI to get a value between 0 and 2 PI
-            gsl_matrix_set(PHI, m, n, nmod(gsl_matrix_get(PHI, m, n), M_PI_X_2));
-
-            // find the nearest possible phase within the set of available ones (depending on the number of states)
-            size_t p = nearest_angle_pos(E, gsl_matrix_get(PHI, m, n));
-
-            // set the actual phase to the best available value
-            gsl_matrix_set(PHI, m, n, gsl_vector_get(E, p));
-
-        }
-    }
+    computePhases(coding, phiR_rad, thetaR_rad, phiI_rad, thetaI_rad);
 
     recomputeGainMap = true;
 
