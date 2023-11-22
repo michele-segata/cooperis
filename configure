@@ -1,7 +1,7 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 #
-# Copyright (C) 2013-2019 Christoph Sommer <sommer@ccs-labs.org>
+# Copyright (C) 2013-2021 Christoph Sommer <sommer@ccs-labs.org>
 #
 # Documentation for these modules is at http://veins.car2x.org/
 #
@@ -25,78 +25,49 @@
 """
 Creates Makefile(s) for building this project.
 """
-
-import os
-import sys
+from os import mkdir
+from os.path import join, isdir
 import subprocess
-from logging import info, warning, error
-from optparse import OptionParser
+import sys
+# avoid adding __init__.py to src and scripts folders
+sys.path.insert(0, "./src/scripts/")
+from library import Library, LibraryChecker, ExternalLibrary
 
+plexe = Library(name="Plexe", library="plexe", default_path="../plexe",
+                versions=["3.0", "3.1"], source_folder="src/plexe",
+                lib_folder="src", images_folder="images",
+                version_script="print-plexe-version")
+veins = Library(name="Veins", library="veins", default_path="../veins",
+                versions=["5.2"], source_folder="src/veins", lib_folder="src",
+                images_folder="images", version_script="print-veins-version")
+gsl = ExternalLibrary(name="GNU Scientific Library (GSL)", library="gsl", lflags="-lgsl -lgslcblas -lm")
 
-if sys.version_info[0] == 3:
-    warning("Warning: running configure with python3 might result in subtle errors.")
-
-# Option handling
-parser = OptionParser()
-parser.add_option("--with-veins", dest="veins", help="link with a version of Veins installed in PATH [default: ../veins]", metavar="PATH", default="../veins")
-parser.add_option("--with-gsl-include", dest="gslinc", help="search for GSL includes in PATH. Hint: you can use pkg-config --cflags gsl to find such directory", metavar="PATH")
-parser.add_option("--with-gsl-lib", dest="gsllib", help="search for GSL lib in PATH. Hint: you can use pkg-config --libs gsl to find such directory", metavar="PATH")
-(options, args) = parser.parse_args()
-
-if args:
-    warning("Superfluous command line arguments: \"%s\"" % " ".join(args))
-
-if options.gslinc is None or options.gsllib is None:
-    error("This project requires the GNU Scientific Library (GSL). Please specify the PATH where include and lib files can be found using the --with-gsl-include and --with-gsl-lib arguments")
-    sys.exit(1)
+libraries = LibraryChecker()
+libraries.add_lib(plexe)
+libraries.add_lib(veins)
+libraries.add_lib(gsl)
 
 # Start with default flags
-makemake_flags = ['-f', '--deep', '--no-deep-includes', '--make-so', '-I', '.', '-o', 'cooperis', '-O', 'out', '-p', 'COOPERIS', '-I', options.gslinc, '-lgsl', '-lgslcblas', '-lm']
-run_libs = [os.path.join('src', 'cooperis'), options.gsllib]
-run_neds = [os.path.join('src', 'cooperis')]
-run_imgs = [os.path.join('images')]
+makemake_flags = ["-f", "--deep", "--no-deep-includes", "--make-so", "-I", ".", "-o", "cooperis", "-O", "out", "-p", "COOPERIS"]
 
+run_libs = []
+run_neds = []
+run_imgs = []
+libraries.check_libraries(makemake_flags, run_libs, run_neds, run_imgs)
 
-# Add flags for Veins
-if options.veins:
-    fname = os.path.join(options.veins, 'print-veins-version')
-    expect_version = ['5.0', '5.1', '5.2']
-    try:
-        print 'Running "%s" to determine Veins version.' % fname
-        version = subprocess.check_output(['env', fname]).strip()
-        if not version in expect_version:
-            print ''
-            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-            warning('Unsupported Veins Version. Expecting %s, found "%s"' % (' or '.join(expect_version), version))
-            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-            print ''
-        else:
-            print 'Found Veins version "%s". Okay.' % version
-    except subprocess.CalledProcessError as e:
-        error('Could not determine Veins Version (by running %s): %s. Check the path to Veins (--with-veins=... option) and the Veins version (should be version %s)' % (fname, e, ' or '.join(expect_version)))
-        sys.exit(1)
-
-    veins_header_dirs = [os.path.join(os.path.relpath(options.veins, 'src'), 'src')]
-    veins_includes = ['-I' + s for s in veins_header_dirs]
-    veins_link = ["-L" + os.path.join(os.path.relpath(options.veins, 'src'), 'src'), "-lveins$(D)"]
-    veins_defs = []
-
-    makemake_flags += veins_includes + veins_link + veins_defs
-    run_libs = [os.path.relpath(os.path.join(options.veins, 'src', 'veins'))] + run_libs
-    run_neds = [os.path.relpath(os.path.join(options.veins, 'src', 'veins'))] + run_neds
-    run_imgs = [os.path.relpath(os.path.join(options.veins, 'images'))] + run_imgs
-
+run_libs.append(join("src", "cooperis"))
+run_neds.append(join("src", "cooperis"))
 
 # Start creating files
-if not os.path.isdir('out'):
-    os.mkdir('out')
+if not isdir("out"):
+    mkdir("out")
 
-f = open(os.path.join('out', 'config.py'), 'w')
-f.write('run_libs = %s\n' % repr(run_libs))
-f.write('run_neds = %s\n' % repr(run_neds))
-f.write('run_imgs = %s\n' % repr(run_imgs))
+f = open(join("out", "config.py"), "w")
+f.write("run_libs = %s\n" % repr(run_libs))
+f.write("run_neds = %s\n" % repr(run_neds))
+f.write("run_imgs = %s\n" % repr(run_imgs))
 f.close()
 
-subprocess.check_call(['env', 'opp_makemake'] + makemake_flags, cwd='src')
+subprocess.check_call(["env", "opp_makemake"] + makemake_flags, cwd="src")
 
-info('Configure done. You can now run "make".')
+print("Configure done. You can now run 'make'.")
