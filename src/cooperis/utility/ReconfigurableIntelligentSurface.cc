@@ -28,6 +28,7 @@
 #include <cmath>
 
 #define IS_ZERO(x) (std::abs(x) < 1e-10)
+#define EQUALS(a, b) (IS_ZERO(a-b))
 
 ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, double frequency, int n, int cellsPerLambda, int lambdaSize, double efficiency, double d_theta, double d_phi)
 {
@@ -282,7 +283,7 @@ bool ReconfigurableIntelligentSurface::canUseCache(double phiI_rad, double theta
 {
     if (recomputeGainMap)
         return false;
-    if (RAD_TO_DEG_ROUND(phiI_rad) != cached_phiTX_deg || RAD_TO_DEG_ROUND(thetaI_rad) != cached_thetaTX_deg)
+    if (!EQUALS(phiI_rad, cached_phiTX) || !EQUALS(thetaI_rad, cached_thetaTX))
         return false;
     return true;
 }
@@ -357,8 +358,8 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
     gsl_matrix_free(Fa);
 
     recomputeGainMap = false;
-    cached_phiTX_deg = RAD_TO_DEG_ROUND(phiTX_rad);
-    cached_thetaTX_deg = RAD_TO_DEG_ROUND(thetaTX_rad);
+    cached_phiTX = phiTX_rad;
+    cached_thetaTX = thetaTX_rad;
 
     return cachedGain(phiRX_rad, thetaRX_rad);
 }
