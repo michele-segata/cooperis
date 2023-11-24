@@ -282,7 +282,7 @@ bool ReconfigurableIntelligentSurface::canUseCache(double phiI_rad, double theta
 {
     if (recomputeGainMap)
         return false;
-    if (RAD_TO_DEG_ROUND(phiI_rad) != cached_phiI_deg || RAD_TO_DEG_ROUND(thetaI_rad) != cached_thetaI_deg)
+    if (RAD_TO_DEG_ROUND(phiI_rad) != cached_phiTX_deg || RAD_TO_DEG_ROUND(thetaI_rad) != cached_thetaTX_deg)
         return false;
     return true;
 }
@@ -357,8 +357,8 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
     gsl_matrix_free(Fa);
 
     recomputeGainMap = false;
-    cached_phiI_deg = RAD_TO_DEG_ROUND(phiTX_rad);
-    cached_thetaI_deg = RAD_TO_DEG_ROUND(thetaTX_rad);
+    cached_phiTX_deg = RAD_TO_DEG_ROUND(phiTX_rad);
+    cached_thetaTX_deg = RAD_TO_DEG_ROUND(thetaTX_rad);
 
     return cachedGain(phiRX_rad, thetaRX_rad);
 }

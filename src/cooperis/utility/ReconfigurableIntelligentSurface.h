@@ -97,8 +97,8 @@ private:
     // gains are cached for a specific coding and a specific incidence angle
     Matrix P;
     double p_tot{};
-    int cached_phiI_deg{};
-    int cached_thetaI_deg{};
+    int cached_phiTX_deg{};
+    int cached_thetaTX_deg{};
 
     std::mt19937_64 rng{};
 
