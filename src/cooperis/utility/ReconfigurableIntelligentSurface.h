@@ -21,6 +21,7 @@
 #pragma once
 
 #include <cmath>
+#include <random>
 using namespace std;
 
 #include <gsl/gsl_vector.h>
@@ -30,6 +31,7 @@ typedef gsl_vector* Vector;
 typedef gsl_vector_complex* CVector;
 typedef gsl_matrix* Matrix;
 typedef gsl_matrix_complex* CMatrix;
+typedef std::vector<Matrix> VMatrix;
 
 #define M_PI_X_2 (2*M_PI)
 
@@ -98,6 +100,7 @@ private:
     int cached_phiI_deg{};
     int cached_thetaI_deg{};
 
+    std::mt19937_64 rng{};
 
 public:
     /**
@@ -107,11 +110,12 @@ public:
      * @param lambdaSize length of the side of the surface in units of lambda
      * @param efficiency reflective efficiency of the surface
      */
-    ReconfigurableIntelligentSurface(double frequency, int n=2, int cellsPerLambda=3, int lambdaSize=5, double efficiency=1.0, double d_theta=M_PI/180, double d_phi=M_PI/180);
+    ReconfigurableIntelligentSurface(int seed, double frequency, int n=2, int cellsPerLambda=3, int lambdaSize=5, double efficiency=1.0, double d_theta=M_PI/180, double d_phi=M_PI/180);
     virtual ~ReconfigurableIntelligentSurface();
 
     /**
      * Reconfigures the meta surface to optimize the reflection for a specific pair of incidence and reflection angles
+     * This procedure enables caching
      *
      * @param phiR_rad the reflection angle phi (azimuth) in radians
      * @param thetaR_rad the reflection angle theta (elevation) in radians
@@ -139,6 +143,31 @@ public:
      * @return matrix of computed phases. This is allocated by the method and should be freed by the user with gsl_matrix_free
      */
     Matrix computePhases(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad);
+
+    /**
+     * Combines a set of configurations into a single one to perform, for example, beam splitting
+     * @param configs vector of phase configurations to combine
+     * @param combined matrix where to store the final combined configuration. This must be pre-allocated
+     * @param random whether to use the random or the average strategy. Combining is either done using phases which occurs most,
+     * choosing a random one in case of phases with the same number of occurrences, or simply averaging all the phases (baseline)
+     */
+    void combineConfigurations(VMatrix configs, Matrix combined, bool random);
+
+    /**
+     * Combines a set of configurations into a single one to perform, for example, beam splitting
+     * @param configs vector of phase configurations to combine
+     * @param random whether to use the random or the average strategy. Combining is either done using phases which occurs most,
+     * choosing a random one in case of phases with the same number of occurrences, or simply averaging all the phases (baseline)
+     * @return matrix with final combined configuration. This is allocated by the method and should be freed by the user with gsl_matrix_free
+     */
+    Matrix combineConfigurations(VMatrix configs, bool random);
+
+    /**
+     * Applies a configuration to the elements of the RIS. This could be used, for example, when combining multiple configurations
+     * Applying this configuration disables caching exactly for that reason (caching works for a single incident-reflected beam config)
+     * @param config matrix of phases to be applied
+     */
+    void applyConfiguration(Matrix config);
 
     /**
      * Computes the gain of the antenna given a specific pair of incidence and reflection angles
@@ -189,6 +218,11 @@ public:
      * @return the modulo between x and y
      */
     static double nmod(double x, double y);
+
+    /**
+     * Performs a binary search for double values returning the position in the array if found or -1
+     */
+    static int binary_search(Vector v, double value);
 
     inline double fix_azimuth(double phi) const;
 

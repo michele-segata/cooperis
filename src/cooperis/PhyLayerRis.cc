@@ -85,7 +85,7 @@ void PhyLayerRis::initialize(int stage)
             cellsPerLambda = par("cellsPerLambda");
             lambdaSize = par("lambdaSize");
 
-            ris = new ReconfigurableIntelligentSurface(centerFrequency, codingStates, cellsPerLambda, lambdaSize);
+            ris = new ReconfigurableIntelligentSurface(getSimulation()->getActiveEnvir()->getConfigEx()->getActiveRunNumber(), centerFrequency, codingStates, cellsPerLambda, lambdaSize);
             annotations = AnnotationManagerAccess().getIfExists();
 
             nodesAntennaHeight = par("nodesAntennaHeight");

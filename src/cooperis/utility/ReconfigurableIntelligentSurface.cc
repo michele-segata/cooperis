@@ -23,13 +23,15 @@
 #include <fstream>
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
+#include <random>
 
 #include <cmath>
 
 #define IS_ZERO(x) (std::abs(x) < 1e-10)
 
-ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(double frequency, int n, int cellsPerLambda, int lambdaSize, double efficiency, double d_theta, double d_phi)
+ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, double frequency, int n, int cellsPerLambda, int lambdaSize, double efficiency, double d_theta, double d_phi)
 {
+    rng.seed(seed);
     p_tot = 0;
     this->efficiency = efficiency;
     this->d_theta = d_theta;
@@ -143,6 +145,97 @@ Matrix ReconfigurableIntelligentSurface::computePhases(double phiR_rad, double t
     Matrix phases = new_matrix(M, N);
     computePhases(phases, phiR_rad, thetaR_rad, phiI_rad, thetaI_rad);
     return phases;
+}
+
+void ReconfigurableIntelligentSurface::combineConfigurations(VMatrix configs, Matrix combined, bool random)
+{
+    std::vector<int> counts;
+    std::vector<int> max_phases;
+    int max_count;
+    if (random)
+        counts.resize(N_s);
+
+    if (!random) {
+        // we do the averaging of all phases
+        gsl_matrix_set_zero(combined);
+        for (Matrix config : configs)
+            gsl_matrix_add(combined, config);
+        gsl_matrix_scale(combined, 1.0 / (double)configs.size());
+        for (int m = 0; m < M; m++) {
+            for (int n = 0; n < N; n++) {
+                // find the nearest possible phase within the set of available ones (depending on the number of states)
+                size_t p = nearest_angle_pos(E, gsl_matrix_get(combined, m, n));
+                // set the actual phase to the best available value
+                gsl_matrix_set(combined, m, n, gsl_vector_get(E, p));
+            }
+        }
+    }
+    else {
+        for (int m = 0; m < M; m++) {
+            for (int n = 0; n < N; n++) {
+                std::fill(counts.begin(), counts.end(), 0);
+                max_phases.clear();
+                max_count = 0;
+
+                for (int i = 0; i < configs.size(); i++) {
+                    // get the index of the phase for the element searching the array of available phases
+                    int pos = binary_search(E, gsl_matrix_get(configs[i], m, n));
+                    if (pos == -1)
+                        throw runtime_error("combineConfigurations: searching for a phase value that does not exist!");
+                    // update the number of times this phase has been seen
+                    counts[pos]++;
+                    // keep track of which the maximum number of occurrences
+                    if (counts[pos] > max_count)
+                        max_count = counts[pos];
+                }
+
+                for (int i = 0; i < counts.size(); i++)
+                    if (counts[i] == max_count)
+                        max_phases.push_back(i);
+
+                // extract a random phase index from max_phases and then apply it to combined[m][n]
+                std::uniform_int_distribution<int> runif(0, max_phases.size() - 1);
+                int index = runif(rng);
+                gsl_matrix_set(combined, m, n, gsl_vector_get(E, max_phases[index]));
+
+            }
+        }
+    }
+}
+
+Matrix ReconfigurableIntelligentSurface::combineConfigurations(VMatrix configs, bool random)
+{
+    if (configs.size() == 0)
+        throw runtime_error("combineConfigurations: the vector of matrices to combine is empty!");
+
+    Matrix combined = new_matrix(configs[0]->size1, configs[0]->size2);
+    combineConfigurations(configs, combined, random);
+    return combined;
+}
+
+void ReconfigurableIntelligentSurface::applyConfiguration(Matrix config)
+{
+    if (config->size1 != coding->size1 || config->size2 != coding->size2)
+        throw runtime_error("applyConfiguration: configuration matrix doesn't match the number of elements of the RIS");
+
+    gsl_matrix_memcpy(coding, config);
+    recomputeGainMap = true;
+}
+
+int ReconfigurableIntelligentSurface::binary_search(Vector v, double value)
+{
+    int left = 0;
+    int right = v->size - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (std::abs(value - gsl_vector_get(v, mid)) < 1e-9)
+            return mid;
+        if (value < gsl_vector_get(v, mid))
+            right = mid - 1;
+        else
+            left = mid + 1;
+    }
+    return -1;
 }
 
 void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)

@@ -26,6 +26,7 @@
 #include "CsvReader.h"
 #include "cooperis/utility/ReconfigurableIntelligentSurface.h"
 #include <iostream>
+#include <sstream>
 
 #ifndef STANDALONE
 using veins::Coord;
@@ -111,7 +112,7 @@ TEST_CASE("Nearest phase") {
 }
 
 TEST_CASE("Metasurface phases") {
-    ReconfigurableIntelligentSurface ris(25e9, 4, 3, 5);
+    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
     CsvReader phases;
 
     int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
@@ -130,7 +131,7 @@ TEST_CASE("Metasurface phases") {
 }
 
 TEST_CASE("Metasurface gains") {
-    ReconfigurableIntelligentSurface ris(25e9, 4, 3, 5);
+    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
     CsvReader gains;
 
     int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
@@ -411,7 +412,7 @@ TEST_CASE("Elevation angle to nearest index conversion") {
 
 TEST_CASE("Generation of gains") {
     SECTION("Output gains for plotting") {
-        ReconfigurableIntelligentSurface ris(25e9, 4, 3, 5);
+        ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
 
         int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
         for (auto &phiR : phiRs) {
@@ -422,5 +423,74 @@ TEST_CASE("Generation of gains") {
             }
         }
         REQUIRE(true);
+    }
+}
+
+// https://stackoverflow.com/a/6098417
+template <typename Iter>
+std::string join(Iter begin, Iter end, std::string const &separator)
+{
+    std::ostringstream result;
+    if (begin != end)
+        result << *begin++;
+    while (begin != end)
+        result << separator << *begin++;
+    return result.str();
+}
+
+TEST_CASE("Metasurface phases for combined configs (average strategy)") {
+    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+    CsvReader phases;
+
+    vector<vector<int>> phiRs = {{-45, 45}, {-45, 45, 135}, {-45, 45, 130}};
+    vector<vector<int>> thetaRs = {{45, 45}, {45, 45, 45}, {45, 45, 45}};
+    for (int i = 0; i < phiRs.size(); i++) {
+        auto phiR = phiRs[i];
+        auto thetaR = thetaRs[i];
+        SECTION("Result for phiR = " + join(phiR.begin(), phiR.end(), ", "))
+        {
+            std::stringstream filename;
+            filename << "matlab/phases_phiR_";
+            filename << join(phiR.begin(), phiR.end(), "_");
+            filename << "_thetaR_";
+            filename << join(thetaR.begin(), thetaR.end(), "_");
+            filename << "_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_4_pl_3_nl_5.csv";
+            phases.read(filename.str());
+
+            VMatrix configs;
+            for (int phi : phiR) {
+                configs.push_back(ris.computePhases(DEG_TO_RAD(phi), DEG_TO_RAD(45), 0, 0));
+            }
+            Matrix combined = ris.combineConfigurations(configs, false);
+            REQUIRE(matrix_equals(combined, phases, phiR[0]));
+            gsl_matrix_free(combined);
+            for (auto config : configs) {
+                gsl_matrix_free(config);
+            }
+        }
+    }
+}
+
+TEST_CASE("Combination of configs") {
+    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+    vector<vector<int>> phiRs = {{-45, 45}, {-45, 45, 135}, {-45, 45, 130}};
+    bool random[] = {true, false};
+    for (vector<int> phiR : phiRs) {
+        for (bool rnd : random) {
+            SECTION("Combining configs for phiRs = [" + join(phiR.begin(), phiR.end(), ", ") + "], strategy = " + (rnd ? "random" : "average")) {
+                VMatrix configs;
+                for (int phi : phiR) {
+                    configs.push_back(ris.computePhases(DEG_TO_RAD(phi), DEG_TO_RAD(45), 0, 0));
+                }
+                Matrix combined = ris.combineConfigurations(configs, rnd);
+                ris.applyConfiguration(combined);
+                ris.writeGains("combogains_" + join(phiR.begin(), phiR.end(), "-") + "_" + (rnd ? "random" : "average"), 0, 0);
+                gsl_matrix_free(combined);
+                for (int i = 0; i < phiR.size(); i++) {
+                    gsl_matrix_free(configs[i]);
+                }
+                REQUIRE(true);
+            }
+        }
     }
 }
