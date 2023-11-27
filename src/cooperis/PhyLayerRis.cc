@@ -432,12 +432,12 @@ unique_ptr<AirFrame> PhyLayerRis::encapsMsg(cPacket* macPkt)
     return encapsMsg(macPkt, txPower);
 }
 
-//simtime_t PhyLayerRis::setRadioState(int rs)
-//{
+// simtime_t PhyLayerRis::setRadioState(int rs)
+// {
 //    if (rs == Radio::TX) decider->switchToTx();
 //    else if (rs == Radio::RX) decider->switchToRx();
 //    return BasePhyLayer::setRadioState(rs);
-//}
+// }
 
 simtime_t PhyLayerRis::getFrameDuration(int payloadLengthBits, MCS mcs) const
 {
@@ -454,6 +454,8 @@ bool PhyLayerRis::alreadyReflected(const AirFrameRis* frame)
     for (int i = 0; i < frame->getReflectingRISArraySize(); i++)
         if (frame->getReflectingRIS(i) == getId())
             return true;
+
+
     return false;
 }
 
@@ -604,7 +606,7 @@ void PhyLayerRis::filterSignal(AirFrame* frame)
 
 }
 
-bool PhyLayerRis::pointBeamTowards(string nodeId, Angles &angles)
+bool PhyLayerRis::pointBeamTowards(string nodeId, Angles& angles)
 {
     cModule* module = findModuleByPath(nodeId.c_str());
     if (module) {

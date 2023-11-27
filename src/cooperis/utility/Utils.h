@@ -185,7 +185,7 @@ Coord cross(const Coord& p1, const Coord& p2);
  * In a left handed system, rotation is clockwise, in a right handed system, counterclockwise
  * @return the rotated vector
  */
-Coord rotate(const Coord& v, const Coord& axis, double angle, bool left_handed=true);
+Coord rotate(const Coord& v, const Coord& axis, double angle, bool left_handed= true);
 
 /**
  * Finds the scaling factor alpha of a direction vector representing the point of intersection with a given plane

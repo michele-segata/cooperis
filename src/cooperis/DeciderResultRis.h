@@ -90,17 +90,17 @@ public:
         reflected = frame->getReflected();
     }
 
-    DeciderResultRis(const DeciderResultRis& r) :
-        DeciderResult80211(r),
-        frameId(r.frameId),
-        gains_dB(r.gains_dB),
-        paths_m(r.paths_m),
-        losses_dB(r.losses_dB),
-        actualLosses_dB(r.actualLosses_dB),
-        phiRs(r.phiRs),
-        thetaRs(r.thetaRs),
-        phiIs(r.phiIs),
-        thetaIs(r.thetaIs)
+    DeciderResultRis(const DeciderResultRis& r)
+        :DeciderResult80211(r)
+        , frameId(r.frameId)
+        , gains_dB(r.gains_dB)
+        , paths_m(r.paths_m)
+        , losses_dB(r.losses_dB)
+        , actualLosses_dB(r.actualLosses_dB)
+        , phiRs(r.phiRs)
+        , thetaRs(r.thetaRs)
+        , phiIs(r.phiIs)
+        , thetaIs(r.thetaIs)
     {}
 
     long int getFrameId() const

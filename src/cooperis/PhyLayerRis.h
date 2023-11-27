@@ -78,7 +78,7 @@ public:
     void requestReconfiguration(int txId, int rxId);
     void requestReconfiguration(int nodeId, bool incidence);
 
-    bool pointBeamTowards(string nodeId, Angles &angles);
+    bool pointBeamTowards(string nodeId, Angles& angles);
 
 protected:
 
@@ -197,7 +197,7 @@ protected:
     virtual void handleMessage(cMessage* msg) override;
     virtual void handleSelfMessage(cMessage* msg) override;
     virtual void sendUp(AirFrame* frame, DeciderResult* result) override;
-//    simtime_t setRadioState(int rs) override;
+    //    simtime_t setRadioState(int rs) override;
 
     /**
      * Override filter to be able to add metadata to the AirFrame and be able to repropagate it immediately (reflect)

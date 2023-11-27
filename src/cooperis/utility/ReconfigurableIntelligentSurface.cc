@@ -46,7 +46,7 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
     N_s = n;
     rho_lambda = cellsPerLambda;
     N_lambda = lambdaSize;
-//    printf("ReconfigurableIntelligentSurface: freq=%f Hz, n=%d, cellsPerLambda=%d, lambdaSize=%d, totalCells=%f\n", frequency, n, cellsPerLambda, lambdaSize, pow(cellsPerLambda*lambdaSize, 2));
+    //    printf("ReconfigurableIntelligentSurface: freq=%f Hz, n=%d, cellsPerLambda=%d, lambdaSize=%d, totalCells=%f\n", frequency, n, cellsPerLambda, lambdaSize, pow(cellsPerLambda*lambdaSize, 2));
     // vector including the available phases depending on the number of states n
     E = linspace(0, N_s - 1, N_s);
     gsl_vector_scale(E, M_PI_X_2 / N_s);
@@ -193,6 +193,8 @@ void ReconfigurableIntelligentSurface::combineConfigurations(VMatrix configs, Ma
                 for (int i = 0; i < counts.size(); i++)
                     if (counts[i] == max_count)
                         max_phases.push_back(i);
+
+
 
                 // extract a random phase index from max_phases and then apply it to combined[m][n]
                 std::uniform_int_distribution<int> runif(0, max_phases.size() - 1);
@@ -384,7 +386,8 @@ void ReconfigurableIntelligentSurface::getConfiguration(double& phiR_rad, double
     thetaI_rad = configThetaI;
 }
 
-double ReconfigurableIntelligentSurface::nmod(double x, double y) {
+double ReconfigurableIntelligentSurface::nmod(double x, double y)
+{
     if (x < 0) {
         double m1 = std::fmod(x, y);
         // force 0 to avoid cases like (-1e-15 + y) mod y != 0
@@ -466,7 +469,6 @@ Matrix ReconfigurableIntelligentSurface::new_matrix(Matrix src)
         for (int c = 0; c < src->size2; c++)
             gsl_matrix_set(m, r, c, gsl_matrix_get(src, r, c));
 
-
     return m;
 }
 
@@ -509,7 +511,6 @@ void ReconfigurableIntelligentSurface::apply_in_place(Matrix m, double (*f)(doub
         for (int c = 0; c < m->size2; c++)
             gsl_matrix_set(m, r, c, f(gsl_matrix_get(m, r, c)));
 
-
 }
 
 void ReconfigurableIntelligentSurface::abs(Vector v)
@@ -524,7 +525,6 @@ void ReconfigurableIntelligentSurface::abs(Matrix m)
         for (int c = 0; c < m->size2; c++)
             gsl_matrix_set(m, r, c, std::abs(gsl_matrix_get(m, r, c)));
 
-
 }
 
 Matrix ReconfigurableIntelligentSurface::abs(CMatrix m)
@@ -533,7 +533,6 @@ Matrix ReconfigurableIntelligentSurface::abs(CMatrix m)
     for (int r = 0; r < m->size1; r++)
         for (int c = 0; c < m->size2; c++)
             gsl_matrix_set(n, r, c, gsl_complex_abs(gsl_matrix_complex_get(m, r, c)));
-
 
     return n;
 }
@@ -546,7 +545,8 @@ size_t ReconfigurableIntelligentSurface::min_pos(Vector v)
     return pos;
 }
 
-double ReconfigurableIntelligentSurface::angle_distance(double a1, double a2) {
+double ReconfigurableIntelligentSurface::angle_distance(double a1, double a2)
+{
     double d = nmod(a2 - a1 + M_PI, M_PI_X_2) - M_PI;
     if (d < -M_PI)
         return d + M_PI_X_2;
@@ -571,6 +571,7 @@ void ReconfigurableIntelligentSurface::exp(CMatrix m)
     for (int r = 0; r < m->size1; r++)
         for (int c = 0; c < m->size2; c++)
             gsl_matrix_complex_set(m, r, c, gsl_complex_exp(gsl_matrix_complex_get(m, r, c)));
+
 }
 
 double ReconfigurableIntelligentSurface::matrix_sum(Matrix m)
@@ -579,6 +580,7 @@ double ReconfigurableIntelligentSurface::matrix_sum(Matrix m)
     for (int r = 0; r < m->size1; r++)
         for (int c = 0; c < m->size2; c++)
             sum += gsl_matrix_get(m, r, c);
+
     return sum;
 }
 
@@ -604,7 +606,8 @@ Vector ReconfigurableIntelligentSurface::matrix_sum(Matrix m, bool by_row)
     return sum;
 }
 
-void ReconfigurableIntelligentSurface::print_matrix(Matrix m) {
+void ReconfigurableIntelligentSurface::print_matrix(Matrix m)
+{
     for (int r = 0; r < m->size1; r++) {
         for (int c = 0; c < m->size2; c++) {
             printf("%+.4f ", gsl_matrix_get(m, r, c));
@@ -613,7 +616,8 @@ void ReconfigurableIntelligentSurface::print_matrix(Matrix m) {
     }
 }
 
-void ReconfigurableIntelligentSurface::print_matrix(CMatrix m) {
+void ReconfigurableIntelligentSurface::print_matrix(CMatrix m)
+{
     for (int r = 0; r < m->size1; r++) {
         for (int c = 0; c < m->size2; c++) {
             gsl_complex v = gsl_matrix_complex_get(m, r, c);
@@ -623,29 +627,33 @@ void ReconfigurableIntelligentSurface::print_matrix(CMatrix m) {
     }
 }
 
-void ReconfigurableIntelligentSurface::print_vector(Vector v) {
+void ReconfigurableIntelligentSurface::print_vector(Vector v)
+{
     for (int c = 0; c < v->size; c++)
         printf("%+.4f ", gsl_vector_get(v, c));
     printf("\n");
 }
 
-const Matrix& ReconfigurableIntelligentSurface::getPhases() const {
+const Matrix& ReconfigurableIntelligentSurface::getPhases() const
+{
     return coding;
 }
 
-const Matrix& ReconfigurableIntelligentSurface::getGains(double &p_tot, double phiTX_rad, double thetaTX_rad) {
+const Matrix& ReconfigurableIntelligentSurface::getGains(double& p_tot, double phiTX_rad, double thetaTX_rad)
+{
     gain(0, 0, phiTX_rad, thetaTX_rad);
     p_tot = this->p_tot;
     return P;
 }
 
-void ReconfigurableIntelligentSurface::writeGains(string prefix, double phiTX_rad, double thetaTX_rad) {
+void ReconfigurableIntelligentSurface::writeGains(string prefix, double phiTX_rad, double thetaTX_rad)
+{
     ofstream f;
     stringstream ss;
     char output_fname[500];
     sprintf(output_fname, "%s_phiR_%f_thetaR_%f_phiI_%f_thetaI_%f_phiTX_%f_thetaTX_%f_n_%d_pl_%d_nl_%d.csv",
-            prefix.c_str(), RAD_TO_DEG(configPhiR), RAD_TO_DEG(configThetaR), RAD_TO_DEG(configPhiI), RAD_TO_DEG(configThetaI),
-            RAD_TO_DEG(phiTX_rad), RAD_TO_DEG(thetaTX_rad), N_s, rho_lambda, N_lambda);
+        prefix.c_str(), RAD_TO_DEG(configPhiR), RAD_TO_DEG(configThetaR), RAD_TO_DEG(configPhiI), RAD_TO_DEG(configThetaI),
+        RAD_TO_DEG(phiTX_rad), RAD_TO_DEG(thetaTX_rad), N_s, rho_lambda, N_lambda);
     f.open(output_fname, ios::out);
 
     f << "phi,theta,gain\n";

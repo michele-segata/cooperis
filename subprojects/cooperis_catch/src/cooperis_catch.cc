@@ -38,7 +38,8 @@ using veins::Angles;
 #define COORD_EQUALS(a, b) (EQUALS(a.x, b.x) && EQUALS(a.y, b.y) && EQUALS(a.z, b.z))
 #define PI2 6.28
 
-bool matrix_equals(const Matrix& m, const CsvReader& csv, double phiR) {
+bool matrix_equals(const Matrix& m, const CsvReader& csv, double phiR)
+{
     if (m->size1 != csv.getRows())
         return false;
     if (m->size2 != csv.getColumns())
@@ -57,6 +58,7 @@ bool matrix_equals(const Matrix& m, const CsvReader& csv, double phiR) {
 
                 return false;
             }
+
 
     return true;
 }
@@ -116,7 +118,7 @@ TEST_CASE("Metasurface phases") {
     CsvReader phases;
 
     int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
-    for (auto &phiR : phiRs) {
+    for (auto& phiR : phiRs) {
         SECTION("Result for phiR = " + std::to_string(phiR))
         {
             std::stringstream filename;
@@ -135,7 +137,7 @@ TEST_CASE("Metasurface gains") {
     CsvReader gains;
 
     int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
-    for (auto &phiR : phiRs) {
+    for (auto& phiR : phiRs) {
         SECTION("Result for phiR = " + std::to_string(phiR))
         {
             std::stringstream filename;
@@ -203,7 +205,7 @@ TEST_CASE("Coordinates system") {
         node = Coord(0, 0, -1);
         a = spherical_angles(ris_v1, ris_v2, ris_vn, ris_pos, node);
         REQUIRE((EQUALS(a.theta, DEG_TO_RAD(90)) &&
-                 (EQUALS(a.phi, DEG_TO_RAD(180)) || EQUALS(a.phi, DEG_TO_RAD(-180)))));
+            (EQUALS(a.phi, DEG_TO_RAD(180)) || EQUALS(a.phi, DEG_TO_RAD(-180)))));
     }
 
     SECTION("Coordinate test: diagonal of a cube, direction north-west") {
@@ -262,17 +264,17 @@ TEST_CASE("Spherical elements") {
 
     SECTION("Spherical element: theta = 0") {
         REQUIRE(EQUALS17(ReconfigurableIntelligentSurface::spherical_element(0, M_PI / 180, M_PI / 180),
-                         0.000000664567899281));
+            0.000000664567899281));
     }
 
     SECTION("Spherical element: theta = 45") {
         REQUIRE(EQUALS17(ReconfigurableIntelligentSurface::spherical_element(M_PI_2 / 2, M_PI / 180, M_PI / 180),
-                         0.000215394309305328));
+            0.000215394309305328));
     }
 
     SECTION("Spherical element: theta = 90") {
         REQUIRE(EQUALS17(ReconfigurableIntelligentSurface::spherical_element(M_PI_2, M_PI / 180, M_PI / 180),
-                         0.000152306776738789));
+            0.000152306776738789));
     }
 
 }
@@ -296,8 +298,8 @@ TEST_CASE("Azimuth angles to index conversion") {
                     // if we scan all angles, the index difference between successive angles must be one
                     if (indexes[indexes.size() - 1] - indexes[indexes.size() - 2] != 1) {
                         std::cout << "Non consecutive indexes for angle " << RAD_TO_DEG(a) << ": index for previous="
-                                  << indexes[indexes.size() - 2] << " current index=" << indexes[indexes.size() - 1]
-                                  << "\n";
+                        << indexes[indexes.size() - 2] << " current index=" << indexes[indexes.size() - 1]
+                        << "\n";
                         diff_one = false;
                     }
                 }
@@ -328,8 +330,8 @@ TEST_CASE("Elevation angles to index conversion") {
                     // if we scan all angles, the index difference between successive angles must be one
                     if (indexes[indexes.size() - 1] - indexes[indexes.size() - 2] != 1) {
                         std::cout << "Non consecutive indexes for angle " << RAD_TO_DEG(a) << ": index for previous="
-                                  << indexes[indexes.size() - 2] << " current index=" << indexes[indexes.size() - 1]
-                                  << "\n";
+                        << indexes[indexes.size() - 2] << " current index=" << indexes[indexes.size() - 1]
+                        << "\n";
                         diff_one = false;
                     }
                 }
@@ -363,8 +365,8 @@ TEST_CASE("Azimuth angle to nearest index conversion") {
                     // if we scan all angles, the index difference between successive angles must be one
                     if (indexes[indexes.size() - 1] - indexes[indexes.size() - 2] != 1) {
                         std::cout << "Non consecutive indexes for angle " << RAD_TO_DEG(a) << ": index for previous="
-                                  << indexes[indexes.size() - 2] << " angle=" << RAD_TO_DEG(angles[i-1]) << " current index=" << indexes[indexes.size() - 1]
-                                  << "\n";
+                        << indexes[indexes.size() - 2] << " angle=" << RAD_TO_DEG(angles[i-1]) << " current index=" << indexes[indexes.size() - 1]
+                        << "\n";
                         diff_one = false;
                     }
                 }
@@ -397,8 +399,8 @@ TEST_CASE("Elevation angle to nearest index conversion") {
                     // if we scan all angles, the index difference between successive angles must be one
                     if (indexes[indexes.size() - 1] - indexes[indexes.size() - 2] != 1) {
                         std::cout << "Non consecutive indexes for angle " << RAD_TO_DEG(a) << ": index for previous="
-                                  << indexes[indexes.size() - 2] << " current index=" << indexes[indexes.size() - 1]
-                                  << "\n";
+                        << indexes[indexes.size() - 2] << " current index=" << indexes[indexes.size() - 1]
+                        << "\n";
                         diff_one = false;
                     }
                 }
@@ -415,7 +417,7 @@ TEST_CASE("Generation of gains") {
         ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
 
         int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
-        for (auto &phiR : phiRs) {
+        for (auto& phiR : phiRs) {
             SECTION("Result for phiR = " + std::to_string(phiR))
             {
                 ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
@@ -428,7 +430,7 @@ TEST_CASE("Generation of gains") {
 
 // https://stackoverflow.com/a/6098417
 template <typename Iter>
-std::string join(Iter begin, Iter end, std::string const &separator)
+std::string join(Iter begin, Iter end, std::string const& separator)
 {
     std::ostringstream result;
     if (begin != end)

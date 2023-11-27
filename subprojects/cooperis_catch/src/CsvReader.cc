@@ -3,7 +3,8 @@
 #include <fstream>
 #include <sstream>
 
-void CsvReader::read(const string& file) {
+void CsvReader::read(const string& file)
+{
 
     rows = 0;
     columns = 0;
@@ -30,25 +31,30 @@ void CsvReader::read(const string& file) {
 
 }
 
-double CsvReader::get(int r, int c) const {
+double CsvReader::get(int r, int c) const
+{
     return data[r][c];
 }
 
-unsigned long CsvReader::getRows() const {
+unsigned long CsvReader::getRows() const
+{
     return rows;
 }
 
-unsigned long CsvReader::getColumns() const {
+unsigned long CsvReader::getColumns() const
+{
     return columns;
 }
 
 CsvReader::CsvReader() = default;
 
-CsvReader::CsvReader(const string& file) {
+CsvReader::CsvReader(const string& file)
+{
     read(file);
 }
 
-void CsvReader::print() const {
+void CsvReader::print() const
+{
     for (int r = 0; r < rows; r++) {
         for (int c = 0; c < columns; c++) {
             std::printf("%+.4f ", data[r][c]);

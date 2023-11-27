@@ -110,7 +110,7 @@ public:
      * @param lambdaSize length of the side of the surface in units of lambda
      * @param efficiency reflective efficiency of the surface
      */
-    ReconfigurableIntelligentSurface(int seed, double frequency, int n=2, int cellsPerLambda=3, int lambdaSize=5, double efficiency=1.0, double d_theta=M_PI/180, double d_phi=M_PI/180);
+    ReconfigurableIntelligentSurface(int seed, double frequency, int n= 2, int cellsPerLambda= 3, int lambdaSize= 5, double efficiency= 1.0, double d_theta= M_PI/180, double d_phi= M_PI/180);
     virtual ~ReconfigurableIntelligentSurface();
 
     /**
@@ -122,7 +122,7 @@ public:
      * @param phiI_rad the incidence angle phi (azimuth) in radians
      * @param thetaI_rad the incidence angle theta (elevation) in radians
      */
-    void configureMetaSurface(double phiR_rad=KEEP_SAME_ANGLE, double thetaR_rad=KEEP_SAME_ANGLE, double phiI_rad=KEEP_SAME_ANGLE, double thetaI_rad=KEEP_SAME_ANGLE);
+    void configureMetaSurface(double phiR_rad= KEEP_SAME_ANGLE, double thetaR_rad= KEEP_SAME_ANGLE, double phiI_rad= KEEP_SAME_ANGLE, double thetaI_rad= KEEP_SAME_ANGLE);
 
     /**
      * Computes and returns the phases to be applied to optimize the reflection for a specific pair of incidence and reflection angles
