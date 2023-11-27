@@ -18,11 +18,12 @@ examples/**/.qtenvrc
 examples/**/.cmdenv-log
 examples/**/valgrind.out
 
-subprojects/veins_ris_catch/out
-subprojects/veins_ris_catch/run
-subprojects/veins_ris_catch/src/*.dll
-subprojects/veins_ris_catch/src/*.dylib
-subprojects/veins_ris_catch/src/*.so
-subprojects/veins_ris_catch/src/Makefile
-subprojects/veins_ris_catch/src/veins_ris_catch
-subprojects/veins_ris_catch/src/veins_ris_catch_dbg
+subprojects/cooperis_catch/bin
+subprojects/cooperis_catch/out
+subprojects/cooperis_catch/run
+subprojects/cooperis_catch/src/*.dll
+subprojects/cooperis_catch/src/*.dylib
+subprojects/cooperis_catch/src/*.so
+subprojects/cooperis_catch/src/Makefile
+subprojects/cooperis_catch/src/cooperis_catch
+subprojects/cooperis_catch/src/cooperis_catch_dbg
