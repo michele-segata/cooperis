@@ -122,7 +122,7 @@ TEST_CASE("Metasurface phases") {
             std::stringstream filename;
             filename << "matlab/phases_phiR_";
             filename << phiR;
-            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_2_pl_3_nl_5.csv";
+            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_4_pl_3_nl_5.csv";
             phases.read(filename.str());
             ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
             REQUIRE(matrix_equals(ris.getPhases(), phases, phiR));
@@ -141,7 +141,7 @@ TEST_CASE("Metasurface gains") {
             std::stringstream filename;
             filename << "matlab/gain_phiR_";
             filename << phiR;
-            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_2_pl_3_nl_5.csv";
+            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_4_pl_3_nl_5.csv";
             gains.read(filename.str());
             ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
             double p_tot;
