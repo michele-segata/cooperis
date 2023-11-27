@@ -5,7 +5,7 @@
 #
 # Copyright (C) 2013-2019 Christoph Sommer <sommer@ccs-labs.org>
 #
-# Documentation for these modules is at http://veins.car2x.org/
+# Documentation for these modules is at http://cooperis.car2x.org/
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
@@ -25,17 +25,20 @@
 #
 
 """
-Runs Veins simulation in current directory
+Runs Cooperis simulation in current directory
 """
 
 import os
 import argparse
 
-def relpath(s):
-    veins_root = os.path.dirname(os.path.realpath(__file__))
-    return os.path.relpath(os.path.join(veins_root, s), '.')
+# v-- contents of out/config.py go here
+# ^-- contents of out/config.py go here
 
-parser = argparse.ArgumentParser('Run a Veins simulation')
+def relpath(s):
+    cooperis_root = os.path.dirname(os.path.realpath(__file__))
+    return os.path.relpath(os.path.join(cooperis_root, s), '.')
+
+parser = argparse.ArgumentParser('Run a Cooperis simulation')
 parser.add_argument('-d', '--debug', action='store_true', help='Run using opp_run_dbg (instead of opp_run)')
 parser.add_argument('-t', '--tool', metavar='TOOL', dest='tool', choices=['lldb', 'gdb', 'memcheck'], help='Wrap opp_run execution in TOOL (lldb, gdb or memcheck)')
 parser.add_argument('-v', '--verbose', action='store_true', help='Print command line before executing')

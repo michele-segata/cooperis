@@ -49,8 +49,8 @@ libraries.add_lib(gsl)
 
 # Start with default flags
 makemake_flags = ["-f", "--deep", "--no-deep-includes", "--make-so", "-I", ".", "-o", "cooperis_catch", "-O", "out", "-p", "COOPERIS_CATCH"]
-run_libs = [join("src", "plexe_lte")]
-run_neds = [join("src", "plexe_lte")]
+run_libs = [join("src", "cooperis_catch")]
+run_neds = [join("src", "cooperis_catch")]
 run_imgs = []
 
 libraries.check_libraries(makemake_flags, run_libs, run_neds, run_imgs)
