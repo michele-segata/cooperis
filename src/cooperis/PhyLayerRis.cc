@@ -69,6 +69,8 @@ void PhyLayerRis::initialize(int stage)
             // compute facing direction
             ris_vn = cross(ris_v1, ris_v2);
 
+            randomCombinationStrategy = par("randomCombinationStrategy").boolValue();
+
             initialConfigurationTime = par("initialConfigurationTime");
             focusBeamFrom = par("focusBeamFrom").stdstringValue();
             pointBeamTo = par("pointBeamTo").stdstringValue();
@@ -76,7 +78,11 @@ void PhyLayerRis::initialize(int stage)
             initialIncidenceTheta = par("initialIncidenceTheta");
             initialReflectionPhi = par("initialReflectionPhi");
             initialReflectionTheta = par("initialReflectionTheta");
-            destinationNodeToTrack = par("destinationNodeToTrack").stdstringValue();
+            initialReflectionsPhi_rad = cStringTokenizer(par("initialReflectionsPhi_rad").stringValue()).asDoubleVector();
+            initialReflectionsTheta_rad = cStringTokenizer(par("initialReflectionsTheta_rad").stringValue()).asDoubleVector();
+            if (initialReflectionsPhi_rad.size() != initialReflectionsTheta_rad.size())
+                throw cRuntimeError("The parameter arrays initialReflectionsPhi_rad and initialReflectionsTheta_rad must match in size");
+            destinationNodesToTrack = cStringTokenizer(par("destinationNodesToTrack").stringValue()).asVector();
 
             initMetasurface = new cMessage("initMetasurface");
             scheduleAt(initialConfigurationTime, initMetasurface);
@@ -307,7 +313,29 @@ void PhyLayerRis::handleSelfMessage(cMessage* msg)
                 std::cout << getFullPath() << ": Ignoring pointBeamTo parameter as module " << pointBeamTo << " cannot be found\n";
             }
         }
-        configureMetaSurface(initialReflectionPhi, initialReflectionTheta, initialIncidencePhi, initialIncidenceTheta);
+        if (pointBeamTo.compare("") != 0 || initialReflectionsPhi_rad.size() == 0) {
+            // pointBeamTo takes precedence. If this is not set, then initialReflectionsPhi_rad takes precedence over initialReflectionPhi
+            configureMetaSurface(initialReflectionPhi, initialReflectionTheta, initialIncidencePhi, initialIncidenceTheta);
+        }
+        else {
+            // if we have multiple reflection angles we have to compute multiple configurations and then combine them
+
+            // get a vector of configurations
+            VMatrix configs;
+            for (size_t i = 0; i < initialReflectionsPhi_rad.size(); i++) {
+                // we already checked above that the two arrays have the same size
+                double phiR = initialReflectionsPhi_rad[i];
+                double thetaR = initialReflectionsTheta_rad[i];
+                // compute the phases. for the time being we only do beam splitting, i.e., incidence direction is a single one
+                configs.push_back(ris->computePhases(phiR, thetaR, initialIncidencePhi, initialIncidenceTheta));
+            }
+            Matrix combined = ris->combineConfigurations(configs, randomCombinationStrategy);
+            ris->applyConfiguration(combined);
+            gsl_matrix_free(combined);
+            for (auto config : configs)
+                gsl_matrix_free(config);
+        }
+
         cancelAndDelete(initMetasurface);
         initMetasurface = nullptr;
     }
@@ -516,13 +544,44 @@ void PhyLayerRis::filterSignal(AirFrame* frame)
             EV_TRACE << "RIS: AirFrame " << frameRis->getOriginalId() << " should be reflected\n";
 
             // before reflecting, reconfigure RIS to point towards a certain destination
-            if (destinationNodeToTrack.compare("") != 0) {
+            if (destinationNodesToTrack.size() != 0) {
                 Angles reflected;
-                if (pointBeamTowards(destinationNodeToTrack, reflected)) {
-                    configureMetaSurfaceReflection(reflected.phi, reflected.theta);
+                if (destinationNodesToTrack.size() == 1) {
+                    // keep things simple if we just track one node
+                    if (pointBeamTowards(destinationNodesToTrack[0], reflected)) {
+                        configureMetaSurfaceReflection(reflected.phi, reflected.theta);
+                    }
+                    else {
+                        std::cout << getFullPath() << ": Not reconfiguring RIS as module " << destinationNodesToTrack[0] << " cannot be found\n";
+                    }
                 }
                 else {
-                    std::cout << getFullPath() << ": Not reconfiguring RIS as module " << destinationNodeToTrack << " cannot be found\n";
+                    // if we have to track multiple nodes we have to compute multiple configurations and then combine them
+
+                    // first, get current incidence angles
+                    double phiR, thetaR, phiI, thetaI;
+                    ris->getConfiguration(phiR, thetaR, phiI, thetaI);
+
+                    // then get a vector of configurations
+                    VMatrix configs;
+                    for (auto destination : destinationNodesToTrack) {
+                        if (pointBeamTowards(destination, reflected)) {
+                            configs.push_back(ris->computePhases(reflected.phi, reflected.theta, phiI, thetaI));
+                        }
+                        else {
+                            std::cout << getFullPath() << ": Not reconfiguring RIS to track node as module " << destination << " cannot be found\n";
+                        }
+                    }
+                    if (configs.size() == 0) {
+                        std::cout << getFullPath() << ": Not reconfiguring RIS to track nodes AT ALL as no one of the requested modules could be found\n";
+                    }
+                    else {
+                        Matrix combined = ris->combineConfigurations(configs, randomCombinationStrategy);
+                        ris->applyConfiguration(combined);
+                        gsl_matrix_free(combined);
+                        for (auto config : configs)
+                            gsl_matrix_free(config);
+                    }
                 }
             }
 

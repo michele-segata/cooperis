@@ -104,6 +104,8 @@ protected:
     // then vn = v1 x v2 = y axis
     Coord ris_vn;
 
+    bool randomCombinationStrategy = true;
+
     double initialConfigurationTime = 1e-6;
     string focusBeamFrom = "";
     string pointBeamTo = "";
@@ -111,7 +113,9 @@ protected:
     double initialIncidenceTheta = 0;
     double initialReflectionPhi = 0;
     double initialReflectionTheta = 0;
-    string destinationNodeToTrack = "";
+    vector<double> initialReflectionsPhi_rad = {};
+    vector<double> initialReflectionsTheta_rad = {};
+    vector<string> destinationNodesToTrack = {};
 
     int codingStates = 4;
     int cellsPerLambda = 3;

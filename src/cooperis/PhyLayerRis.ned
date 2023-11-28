@@ -73,9 +73,18 @@ simple PhyLayerRis extends BasePhyLayer
         // reflection angles are ignored if pointBeamTo is set
         double initialReflectionPhi @unit(rad) = default(0rad);
         double initialReflectionTheta @unit(rad) = default(0rad);
+        // same as the previous parameters, but enables to specify a list of phis and thetas, which will then be combined into a single configuration
+        // if this is not set as an empty string (""), this takes precedence over the previous two parameters
+        // as for the previous two parameters, this is ignored if pointBeamTo is set
+        string initialReflectionsPhi_rad = default("");
+        string initialReflectionsTheta_rad = default("");
+
+        // determine whether to use the random strategy when combining multiple configurations or the averaging one
+        bool randomCombinationStrategy = default(true);
 
         // whenever a frame is reflected, reconfigure the RIS to point towards that node
-        string destinationNodeToTrack = default("");
+        // this can be set as a space-separated list of nodes to track multiple ones by combining multiple configurations 
+        string destinationNodesToTrack = default("");
 
         // whether to ignore non reflected frame on reception (capture effect, as non reflected signal comes in first)
         bool ignoreNonReflectedSignals = default(false);
