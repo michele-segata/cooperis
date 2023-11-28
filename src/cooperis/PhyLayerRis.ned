@@ -106,5 +106,8 @@ simple PhyLayerRis extends BasePhyLayer
         // size of a side of the metasurface in units of lambda
         // the total number of elements (assuming a square surfaces) is (lambdaSize * cellsPerLambda)^2
         int lambdaSize = default(5);
+        // angular resolution of the model for phi and theta
+        double d_phi @unit(rad) = default(1deg);
+        double d_theta @unit(rad) = default(1deg);
 
 }

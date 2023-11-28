@@ -120,6 +120,8 @@ protected:
     int codingStates = 4;
     int cellsPerLambda = 3;
     int lambdaSize = 5;
+    double d_phi = M_PI / 180;
+    double d_theta = M_PI / 180;
 
     ReconfigurableIntelligentSurface* ris = nullptr;
 
