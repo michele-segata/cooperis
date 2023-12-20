@@ -413,16 +413,39 @@ TEST_CASE("Elevation angle to nearest index conversion") {
 }
 
 TEST_CASE("Generation of gains") {
-    SECTION("Output gains for plotting") {
-        ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
 
-        int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
-        for (auto& phiR : phiRs) {
-            SECTION("Result for phiR = " + std::to_string(phiR))
-            {
-                ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
-                ris.writeGains("plotgains", 0, 0);
+    int lambdaSizes[] = {5, 10, 20};
+    SECTION("Output gains for plotting") {
+    for (auto lambdaSize : lambdaSizes) {
+            ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, lambdaSize);
+
+            int phiRs[] = {-45};
+            for (auto &phiR: phiRs) {
+                SECTION("Result for phiR = " + std::to_string(phiR) + " lambdaSize = " + std::to_string(lambdaSize))
+                {
+                    ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
+                    ris.writeGains("plotgains", 0, 0);
+                }
             }
+            REQUIRE(true);
+        }
+    }
+    SECTION("Output gains for different TX positions") {
+        ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+        Coord ris_v1(1, 0, 0);
+        Coord ris_v2(0, 0, -1);
+        Coord ris_pos(0, 0, 0);
+        Coord ris_vn = cross(ris_v1, ris_v2);
+
+        // tx positions: 10 meters from the RIS (y) moving left to right (x = -50 -25 0 25 50)
+        Coord node = {0, 10, 0};
+        ris.configureMetaSurface(DEG_TO_RAD(-45), DEG_TO_RAD(45), 0, 0);
+        for (int i = 0; i < 9; i++) {
+            // -25.00 -18.75 -12.50  -6.25   0.00   6.25  12.50  18.75  25.00
+            double xPos = -25 + i * 6.25;
+            node.x = xPos;
+            Angles a = spherical_angles(ris_v1, ris_v2, ris_vn, ris_pos, node);
+            ris.writeGains("txgains", a.phi, a.theta);
         }
         REQUIRE(true);
     }
@@ -474,7 +497,7 @@ TEST_CASE("Metasurface phases for combined configs (average strategy)") {
 }
 
 TEST_CASE("Combination of configs") {
-    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+    ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
     vector<vector<int>> phiRs = {{-45, 45}, {-45, 45, 135}, {-45, 45, 130}};
     bool random[] = {true, false};
     for (vector<int> phiR : phiRs) {
@@ -486,7 +509,7 @@ TEST_CASE("Combination of configs") {
                 }
                 Matrix combined = ris.combineConfigurations(configs, rnd);
                 ris.applyConfiguration(combined);
-                ris.writeGains("combogains_" + join(phiR.begin(), phiR.end(), "-") + "_" + (rnd ? "random" : "average"), 0, 0);
+                ris.writeGains("combogains_" + join(phiR.begin(), phiR.end(), "@") + "_" + (rnd ? "random" : "average"), 0, 0);
                 gsl_matrix_free(combined);
                 for (int i = 0; i < phiR.size(); i++) {
                     gsl_matrix_free(configs[i]);
