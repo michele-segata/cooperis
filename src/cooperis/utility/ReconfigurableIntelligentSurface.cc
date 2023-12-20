@@ -261,6 +261,7 @@ void ReconfigurableIntelligentSurface::configureMetaSurface(double phiR_rad, dou
     else
         thetaI_rad = configThetaI;
 
+    // printf("configuring metasurface for pr=%.8f tr=%.8f\n", phiR_rad, thetaR_rad);
     computePhases(coding, phiR_rad, thetaR_rad, phiI_rad, thetaI_rad);
 
     recomputeGainMap = true;
@@ -651,7 +652,7 @@ void ReconfigurableIntelligentSurface::writeGains(string prefix, double phiTX_ra
     ofstream f;
     stringstream ss;
     char output_fname[500];
-    sprintf(output_fname, "%s_phiR_%f_thetaR_%f_phiI_%f_thetaI_%f_phiTX_%f_thetaTX_%f_n_%d_pl_%d_nl_%d.csv",
+    sprintf(output_fname, "%s_phiR_%+07.2f_thetaR_%+07.2f_phiI_%+07.2f_thetaI_%+07.2f_phiTX_%+07.2f_thetaTX_%+07.2f_n_%d_pl_%d_nl_%d.csv",
         prefix.c_str(), RAD_TO_DEG(configPhiR), RAD_TO_DEG(configThetaR), RAD_TO_DEG(configPhiI), RAD_TO_DEG(configThetaI),
         RAD_TO_DEG(phiTX_rad), RAD_TO_DEG(thetaTX_rad), N_s, rho_lambda, N_lambda);
     f.open(output_fname, ios::out);
