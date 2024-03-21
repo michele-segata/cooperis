@@ -451,6 +451,29 @@ TEST_CASE("Generation of gains") {
     }
 }
 
+TEST_CASE("Generation of gains, tx.y=100") {
+    SECTION("Output gains for different TX positions, tx.y=100") {
+        ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+        Coord ris_v1(1, 0, 0);
+        Coord ris_v2(0, 0, -1);
+        Coord ris_pos(0, 0, 0);
+        Coord ris_vn = cross(ris_v1, ris_v2);
+
+        // tx positions: 10 meters from the RIS (y) moving left to right (x = -50 -25 0 25 50)
+        Coord node = {0, 100, 0};
+        ris.configureMetaSurface(DEG_TO_RAD(-45), DEG_TO_RAD(45), 0, 0);
+        for (int i = 0; i < 9; i++) {
+            // -25.00 -18.75 -12.50  -6.25   0.00   6.25  12.50  18.75  25.00
+            double xPos = -25 + i * 6.25;
+            node.x = xPos;
+            Angles a = spherical_angles(ris_v1, ris_v2, ris_vn, ris_pos, node);
+            Angles b = spherical_angles(ris_v1, ris_v2, ris_vn, ris_pos, Coord(xPos, 10, 0));
+            ris.writeGains("txgains100", a.phi, a.theta);
+        }
+        REQUIRE(true);
+    }
+}
+
 // https://stackoverflow.com/a/6098417
 template <typename Iter>
 std::string join(Iter begin, Iter end, std::string const& separator)
