@@ -22,6 +22,8 @@
 
 #include <cmath>
 #include <random>
+#include <mutex>
+#include <thread>
 using namespace std;
 
 #include <gsl/gsl_vector.h>
@@ -102,6 +104,12 @@ private:
 
     std::mt19937_64 rng{};
 
+    unsigned int n_max_threads;
+
+    static void gain_CPU_parallelized(void* args);
+
+    struct thread_gain_args;
+
 public:
     /**
      * @param frequency frequency in Hz at which the surface is operating
@@ -113,6 +121,11 @@ public:
     ReconfigurableIntelligentSurface(int seed, double frequency, int n= 2, int cellsPerLambda= 3, int lambdaSize= 5, double efficiency= 1.0, double d_theta= M_PI/180, double d_phi= M_PI/180);
     virtual ~ReconfigurableIntelligentSurface();
 
+    /**
+     * Sets the number of threads to be used for the computation of the gains
+     * @param n number of threads
+     */
+    void setMaxThreads(unsigned int n);
     /**
      * Reconfigures the meta surface to optimize the reflection for a specific pair of incidence and reflection angles
      * This procedure enables caching
