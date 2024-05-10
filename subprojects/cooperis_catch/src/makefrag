@@ -21,6 +21,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+
 all: cooperis_catch$(D)
 
 cooperis_catch$(D): $(O)/cooperis_catch$(D)
@@ -34,3 +35,7 @@ $(O)/cooperis_catch$(D): $(OBJS) $(O)/$(TARGET)
 cleanbin:
 	$(Q)-rm -f $(O)/cooperis_catch$(D)
 	$(Q)-rm -f cooperis_catch$(D)
+
+ifeq ($(COMPUTE_ENGINE),cuda)
+    LIBS += -L/usr/local/cuda/lib64 -lcudart
+endif

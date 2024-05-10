@@ -36,3 +36,28 @@ VEINS_NEED_MSG6 := $(shell echo ${OMNETPP_VERSION} | grep "^5" >/dev/null 2>&1; 
 ifeq ($(VEINS_NEED_MSG6),0)
   MSGCOPTS += --msg6
 endif
+
+
+ifeq ($(COMPUTE_ENGINE), cuda)
+    # NVCC compiler options:
+    NVCC=nvcc
+    NVCC_FLAGS= --compiler-options -fPIC
+    NVCC_LIBS=
+
+    # CUDA library directory:
+    CUDA_LIB_DIR= -L$(CUDA_ROOT_DIR)/lib64
+    # CUDA include directory:
+    CUDA_INC_DIR= -I$(CUDA_ROOT_DIR)/include
+    # CUDA linking libraries:
+    CUDA_LINK_LIBS= -lcudart
+
+    CUDA_SRC_DIR=cooperis/cuda
+
+    OBJS+= $O/$(CUDA_SRC_DIR)/WithCuda.o
+endif
+
+# Compile CUDA source files to object files:
+$O/%.o : %.cu %.h
+	$(MKPATH) $(dir $@)
+	$(qecho) "$<"
+	@$(NVCC) $(NVCC_FLAGS) -c $< -o $@ $(NVCC_LIBS)
