@@ -24,6 +24,7 @@
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
 #include <random>
+#include "../cuda/WithCuda.h"
 
 #include <cmath>
 
@@ -314,36 +315,36 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
 
     Matrix PHI = coding;
     double alpha;
+
+    withcuda::cuda_matrix cuda_k_du_sin_cos;
+    withcuda::cuda_matrix cuda_k_du_sin_sin;
+    withcuda::cuda_cmatrix cuda_phase;
+
+    withcuda::cuda_matrix_alloc(cuda_k_du_sin_cos, k_du_sin_cos->size1, k_du_sin_cos->size2);
+    withcuda::cuda_matrix_alloc(cuda_k_du_sin_sin, k_du_sin_sin->size1, k_du_sin_sin->size2);
+    withcuda::cuda_cmatrix_alloc(cuda_phase, phase->size1, phase->size2);
+
+    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_cos, k_du_sin_cos);
+    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_sin, k_du_sin_sin);
+
     for (int m = 0; m < M; m++) {
         for (int n = 0; n < N; n++) {
             // compute the phase offset due to the incidence of the signal
             alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
             // compute the phase offsets for all the possible phiRX,thetaRX pairs
-            Matrix n_k_du_sin_cos = new_matrix(k_du_sin_cos);
-            Matrix m_k_du_sin_sin = new_matrix(k_du_sin_sin);
             // scale by negative m and n, as these matrices need to be subtracted
-            gsl_matrix_scale(n_k_du_sin_cos, -n);
-            gsl_matrix_scale(m_k_du_sin_sin, -m);
-            gsl_matrix_add(n_k_du_sin_cos, m_k_du_sin_sin);
-            // add phase offset due to the position of the transmitter
-            gsl_matrix_add_constant(n_k_du_sin_cos, alpha);
-            // add phase offset due to coding
-            gsl_matrix_add_constant(n_k_du_sin_cos, gsl_matrix_get(PHI, m, n));
-            CMatrix complex_matrix = new_cmatrix(n_k_du_sin_cos);
-            gsl_matrix_complex_scale(complex_matrix, C_0_M1j);
-            exp(complex_matrix);
-            // compute final phases e^-j(...)
-            gsl_matrix_complex_add(phase, complex_matrix);
-
-            gsl_matrix_complex_free(complex_matrix);
-            gsl_matrix_free(n_k_du_sin_cos);
-            gsl_matrix_free(m_k_du_sin_sin);
+            withcuda::matrix_n_m_compute(cuda_k_du_sin_cos, cuda_k_du_sin_sin, -n, -m, alpha, gsl_matrix_get(PHI, m, n), cuda_phase);
         }
     }
+    withcuda::cuda_matrix_free(cuda_k_du_sin_cos);
+    withcuda::cuda_matrix_free(cuda_k_du_sin_sin);
 
     // compute absolute value of all phases, i.e., length of all vectors
     // if length = 0 then all signals were interfering destructively
     // the longer the vector, the more constructively all the signals are summing up together
+    withcuda::cuda_cmatrix_to_gsl_cmatrix(phase, cuda_phase);
+
+    withcuda::cuda_cmatrix_free(cuda_phase);
     Matrix Fa = abs(phase);
     gsl_matrix_complex_free(phase);
 
