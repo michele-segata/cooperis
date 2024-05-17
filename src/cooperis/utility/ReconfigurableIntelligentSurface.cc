@@ -24,6 +24,7 @@
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
 #include <random>
+#include <iostream>
 
 #include <cmath>
 
@@ -96,7 +97,6 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
 
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
-
 }
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
@@ -136,7 +136,6 @@ void ReconfigurableIntelligentSurface::computePhases(Matrix phases, double phiR_
 
             // set the actual phase to the best available value
             gsl_matrix_set(PHI, m, n, gsl_vector_get(E, p));
-
         }
     }
 }
@@ -312,34 +311,31 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
 
     CMatrix phase = new_cmatrix(Ts, Ps);
 
-    Matrix PHI = coding;
-    double alpha;
+    WithOpencl::cl_matrix cl_k_du_sin_sin;
+    WithOpencl::cl_matrix cl_k_du_sin_cos;
+    WithOpencl::cl_cmatrix cl_phase;
+
+    this->opencl.cl_matrix_alloc(cl_k_du_sin_sin, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_sin->data);
+    this->opencl.cl_matrix_alloc(cl_k_du_sin_cos, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_cos->data);
+    this->opencl.cl_cmatrix_alloc(cl_phase, Ts, Ps, CL_MEM_READ_WRITE);
+
+    this->opencl.zero_cl_cmatrix(cl_phase);
+
     for (int m = 0; m < M; m++) {
         for (int n = 0; n < N; n++) {
-            // compute the phase offset due to the incidence of the signal
-            alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
-            // compute the phase offsets for all the possible phiRX,thetaRX pairs
-            Matrix n_k_du_sin_cos = new_matrix(k_du_sin_cos);
-            Matrix m_k_du_sin_sin = new_matrix(k_du_sin_sin);
-            // scale by negative m and n, as these matrices need to be subtracted
-            gsl_matrix_scale(n_k_du_sin_cos, -n);
-            gsl_matrix_scale(m_k_du_sin_sin, -m);
-            gsl_matrix_add(n_k_du_sin_cos, m_k_du_sin_sin);
-            // add phase offset due to the position of the transmitter
-            gsl_matrix_add_constant(n_k_du_sin_cos, alpha);
-            // add phase offset due to coding
-            gsl_matrix_add_constant(n_k_du_sin_cos, gsl_matrix_get(PHI, m, n));
-            CMatrix complex_matrix = new_cmatrix(n_k_du_sin_cos);
-            gsl_matrix_complex_scale(complex_matrix, C_0_M1j);
-            exp(complex_matrix);
-            // compute final phases e^-j(...)
-            gsl_matrix_complex_add(phase, complex_matrix);
 
-            gsl_matrix_complex_free(complex_matrix);
-            gsl_matrix_free(n_k_du_sin_cos);
-            gsl_matrix_free(m_k_du_sin_sin);
+            double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
+            double PHI = gsl_matrix_get(coding, m, n);
+            // enqueue the kernel and set the arguments
+            this->opencl.gain_compute_phase(cl_k_du_sin_cos, cl_k_du_sin_sin, n, m, alpha, PHI, cl_phase);
         }
     }
+
+    // read the data back
+    this->opencl.cl_cmatrix_to_gsl_cmatrix(phase, cl_phase);
+    this->opencl.cl_matrix_free(cl_k_du_sin_sin);
+    this->opencl.cl_matrix_free(cl_k_du_sin_cos);
+    this->opencl.cl_cmatrix_free(cl_phase);
 
     // compute absolute value of all phases, i.e., length of all vectors
     // if length = 0 then all signals were interfering destructively

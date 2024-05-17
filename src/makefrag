@@ -36,3 +36,10 @@ VEINS_NEED_MSG6 := $(shell echo ${OMNETPP_VERSION} | grep "^5" >/dev/null 2>&1; 
 ifeq ($(VEINS_NEED_MSG6),0)
   MSGCOPTS += --msg6
 endif
+
+################################################################################
+# if make option ENGINE = opencl is set, we need to link with OpenCL
+
+ifeq ($(COMPUTE_ENGINE),opencl)
+    COPTS += -DCL_TARGET_OPENCL_VERSION=300
+endif

@@ -34,6 +34,8 @@ typedef gsl_matrix_complex* CMatrix;
 typedef std::vector<Matrix> VMatrix;
 
 #define M_PI_X_2 (2*M_PI)
+#include "../opencl/WithOpencl.h"
+
 
 #define RAD_TO_DEG(x) ((x)*180/M_PI)
 #define RAD_TO_DEG_ROUND(x) (std::round((x)*180/M_PI))
@@ -101,6 +103,8 @@ private:
     double cached_thetaTX{};
 
     std::mt19937_64 rng{};
+
+    WithOpencl opencl;
 
 public:
     /**
