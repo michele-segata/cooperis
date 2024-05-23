@@ -18,17 +18,19 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
+#include <cmath>
+#include <fcntl.h>
+#include <fstream>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_complex_math.h>
-#include <fstream>
+#include <random>
+#include <thread>
+#include <vector>
+
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
-#include <thread>
-#include <mutex>
-#include <random>
-#include <fcntl.h>
-#include <cmath>
-#include <vector>
+
+#define DEFAULT_N_COMPUTE_THREADS 8
 
 #define IS_ZERO(x) (std::abs(x) < 1e-10)
 #define EQUALS(a, b) (IS_ZERO(a-b))
@@ -100,9 +102,13 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
 
+#ifdef N_COMPUTE_THREADS
+    n_max_threads = N_COMPUTE_THREADS;
+#else
     n_max_threads = std::thread::hardware_concurrency();
+#endif
     if (n_max_threads <= 0)
-        n_max_threads = 8;
+        n_max_threads = DEFAULT_N_COMPUTE_THREADS;
 }
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
@@ -118,11 +124,6 @@ ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
     gsl_vector_free(theta);
     gsl_vector_free(phi);
     gsl_vector_free(E);
-}
-
-void ReconfigurableIntelligentSurface::setMaxThreads(unsigned int n)
-{
-    n_max_threads = n;
 }
 
 void ReconfigurableIntelligentSurface::computePhases(Matrix phases, double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
@@ -319,10 +320,10 @@ struct ReconfigurableIntelligentSurface::thread_gain_args {
     vector<CMatrix>* phases;
 };
 
-void ReconfigurableIntelligentSurface::gain_CPU_parallelized(void* args)
+void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thread_args)
 {
     // extract the arguments
-    struct thread_gain_args* t_args = (struct thread_gain_args*) args;
+    struct thread_gain_args* t_args = (struct thread_gain_args*) thread_args;
 
     Matrix n_k_du_sin_cos = new_matrix(t_args->ris->k_du_sin_cos);
     Matrix m_k_du_sin_sin = new_matrix(t_args->ris->k_du_sin_sin);
@@ -358,21 +359,8 @@ void ReconfigurableIntelligentSurface::gain_CPU_parallelized(void* args)
     gsl_matrix_complex_free(complex_matrix);
 }
 
-double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+void ReconfigurableIntelligentSurface::gain_compute_phase_CPU(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
-
-    // fix the corner case in which phi is between -180 and -180 + d_phi/2
-    // the gain matrix (if d_phi = 1 degree) would have values from -179 to 180
-    // if phi = -179.8, for example, this will fall into the 180 degrees bin, as it is equivalent to 180.2 degrees
-    // the 180 degrees bin indeed goes from 179.5 to 180.5 degrees (for d_phi = 1 degree)
-    phiRX_rad = fix_azimuth(phiRX_rad);
-    phiTX_rad = fix_azimuth(phiTX_rad);
-
-    if (canUseCache(phiTX_rad, thetaTX_rad)) {
-        return cachedGain(phiRX_rad, thetaRX_rad);
-    }
-
-    CMatrix phase = new_cmatrix(Ts, Ps);
 
     // number of threads to use
     int n_threads = this->n_max_threads;
@@ -410,7 +398,7 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
         last_start = last_end;
         last_end += job_per_thread;
 
-        gain_threads_list[i] = thread(gain_CPU_parallelized, t_args);
+        gain_threads_list[i] = thread(gain_compute_phase_CPU_routine, t_args);
     }
 
     // wait for all threads to finish and sum up the results
@@ -419,6 +407,25 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
         gsl_matrix_complex_add(phase, phase_list[i]);
         gsl_matrix_complex_free(phase_list[i]);
     }
+}
+
+double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+{
+
+    // fix the corner case in which phi is between -180 and -180 + d_phi/2
+    // the gain matrix (if d_phi = 1 degree) would have values from -179 to 180
+    // if phi = -179.8, for example, this will fall into the 180 degrees bin, as it is equivalent to 180.2 degrees
+    // the 180 degrees bin indeed goes from 179.5 to 180.5 degrees (for d_phi = 1 degree)
+    phiRX_rad = fix_azimuth(phiRX_rad);
+    phiTX_rad = fix_azimuth(phiTX_rad);
+
+    if (canUseCache(phiTX_rad, thetaTX_rad)) {
+        return cachedGain(phiRX_rad, thetaRX_rad);
+    }
+
+    CMatrix phase = new_cmatrix(Ts, Ps);
+
+    gain_compute_phase_CPU(phase, phiRX_rad, thetaRX_rad, phiTX_rad, thetaTX_rad);
 
     // compute absolute value of all phases, i.e., length of all vectors
     // if length = 0 then all signals were interfering destructively
