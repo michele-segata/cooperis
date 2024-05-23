@@ -34,8 +34,10 @@ typedef gsl_matrix_complex* CMatrix;
 typedef std::vector<Matrix> VMatrix;
 
 #define M_PI_X_2 (2*M_PI)
-#include "../opencl/WithOpencl.h"
 
+#ifdef WITH_OPENCL
+#include "../opencl/WithOpencl.h"
+#endif
 
 #define RAD_TO_DEG(x) ((x)*180/M_PI)
 #define RAD_TO_DEG_ROUND(x) (std::round((x)*180/M_PI))
@@ -104,7 +106,17 @@ private:
 
     std::mt19937_64 rng{};
 
+#ifdef WITH_OPENCL
     WithOpencl opencl;
+#else
+    unsigned int n_max_threads;
+
+    struct thread_gain_args;
+
+    static void gain_compute_phase_CPU_routine(void* thread_args);
+
+#endif
+    void gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad);
 
 public:
     /**
