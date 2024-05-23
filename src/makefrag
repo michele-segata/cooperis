@@ -37,12 +37,12 @@ ifeq ($(VEINS_NEED_MSG6),0)
   MSGCOPTS += --msg6
 endif
 
+################################################################################ Parallelization pardigm
 
-ifeq ($(COMPUTE_ENGINE), cuda)
+ifeq ($(COMPUTE_ENGINE),cuda)
     # NVCC compiler options:
     NVCC=nvcc
     NVCC_FLAGS= --compiler-options -fPIC
-    NVCC_LIBS=
 
     # CUDA library directory:
     CUDA_LIB_DIR= -L$(CUDA_ROOT_DIR)/lib64
@@ -54,10 +54,39 @@ ifeq ($(COMPUTE_ENGINE), cuda)
     CUDA_SRC_DIR=cooperis/cuda
 
     OBJS+= $O/$(CUDA_SRC_DIR)/WithCuda.o
+    CXXFLAGS += -DWITH_CUDA
+
+    ifdef CUDA_DEVICE
+        CXXFLAGS += -DCUDA_DEVICE_ID=$(CUDA_DEVICE)
+    endif
+else ifeq ($(COMPUTE_ENGINE),opencl)
+    # OpenCL parallelization
+    CXXFLAGS += -DCL_TARGET_OPENCL_VERSION=300 -DWITH_OPENCL
+
+    ifdef CL_DEVICE
+        CXXFLAGS += -DCL_DEVICE_ID=$(CL_DEVICE)
+    endif
+    ifdef CL_PLATFORM
+        CXXFLAGS += -DCL_PLATFORM_ID=$(CL_PLATFORM)
+    endif
+
+    OBJS+= $O/cooperis/opencl/WithOpencl.o
+else
+    # CPU parallelization
+    LIBS+= -lpthread
+    ifdef COMPUTE_THREADS
+        CXXFLAGS += -DN_COMPUTE_THREADS=$(COMPUTE_THREADS)
+    endif
 endif
+
+# Compile OpenCl C++ source files to object files:
+$O/%.o: %.cxx %.h
+	@$(MKPATH) $(dir $@)
+	$(qecho) "$<"
+	$(Q)$(CXX) -c $(CXXFLAGS) $(COPTS) -o $@ $<
 
 # Compile CUDA source files to object files:
 $O/%.o : %.cu %.h
-	$(MKPATH) $(dir $@)
+	@$(MKPATH) $(dir $@)
 	$(qecho) "$<"
-	@$(NVCC) $(NVCC_FLAGS) -c $< -o $@ $(NVCC_LIBS)
+	@$(NVCC) $(NVCC_FLAGS) -c $< -o $@

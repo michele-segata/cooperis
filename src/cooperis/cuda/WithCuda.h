@@ -30,6 +30,7 @@ CUDA_GLOBAL
 void gain_compute_phase_kernel(const double* k_du_sin_cos, const double* k_du_sin_sin, double n, double m, double alpha, double PHI, double* phase_real, double* phase_img, size_t size);
 
 /**
+ * @param maxThreadsPerBlock maximum number of threads per block
  * @param k_du_sin_cos the precomputed sin_cos matrix
  * @param k_du_sin_sin the precomputed sin_sin matrix
  * @param n the number part of the gain
@@ -38,7 +39,7 @@ void gain_compute_phase_kernel(const double* k_du_sin_cos, const double* k_du_si
  * @param PHI PHI value
  * @param phase the output phase matrix
  */
-void gain_compute_phase(const cuda_matrix& k_du_sin_cos, const cuda_matrix& k_du_sin_sin, double n, double m, double alpha, double PHI, cuda_cmatrix& phase);
+void gain_compute_phase(int maxThreadsPerBlock, const cuda_matrix& k_du_sin_cos, const cuda_matrix& k_du_sin_sin, double n, double m, double alpha, double PHI, cuda_cmatrix& phase);
 
 /**
  * @param cuda output matrix
@@ -81,5 +82,12 @@ void cuda_matrix_free(cuda_matrix& cuda);
  * @param cuda cmatrix to free
  */
 void cuda_cmatrix_free(cuda_cmatrix& cuda);
+
+/**
+ * @param device the cuda device to use
+ */
+void set_cuda_device(int device);
+
+int get_cuda_max_threads_per_block();
 
 } // namespace withcuda

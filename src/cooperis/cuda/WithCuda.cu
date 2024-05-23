@@ -4,8 +4,6 @@
 #include <iostream>
 #include "WithCuda.h"
 
-#define CUDA_BLOCK_SIZE 1024
-
 namespace withcuda {
 
 void cuda_assert(cudaError_t code, const char* file = __FILE__, int line = __LINE__)
@@ -20,16 +18,16 @@ __global__ void gain_compute_phase_kernel(const double* k_du_sin_cos, const doub
 {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        double tmp_img = -((n * k_du_sin_cos[i]) + (m * k_du_sin_sin[i]) + alpha + PHI);
+        double tmp_img = -((-n * k_du_sin_cos[i]) + (-m * k_du_sin_sin[i]) + alpha + PHI);
         phase_real[i] += cos(tmp_img);
         phase_img[i] += sin(tmp_img);
     }
 }
 
-void gain_compute_phase(const cuda_matrix& k_du_sin_cos, const cuda_matrix& k_du_sin_sin, double n, double m, double alpha, double PHI, cuda_cmatrix& phase)
+void gain_compute_phase(int max_threads_per_block, const cuda_matrix& k_du_sin_cos, const cuda_matrix& k_du_sin_sin, double n, double m, double alpha, double PHI, cuda_cmatrix& phase)
 {
-    int num_blocks = (k_du_sin_cos.rows * k_du_sin_cos.cols + CUDA_BLOCK_SIZE - 1) / CUDA_BLOCK_SIZE;
-    gain_compute_phase_kernel<<<num_blocks, CUDA_BLOCK_SIZE>>>(k_du_sin_cos.data, k_du_sin_sin.data, n, m, alpha, PHI, dest.data_real, dest.data_img, phase.rows * phase.cols);
+    int num_blocks = (k_du_sin_cos.rows * k_du_sin_cos.cols + max_threads_per_block - 1) / max_threads_per_block;
+    gain_compute_phase_kernel<<<num_blocks, max_threads_per_block>>>(k_du_sin_cos.data, k_du_sin_sin.data, n, m, alpha, PHI, phase.data_real, phase.data_img, phase.rows * phase.cols);
     cuda_assert(cudaDeviceSynchronize(), __FILE__, __LINE__);
 }
 
@@ -94,4 +92,25 @@ void cuda_cmatrix_free(cuda_cmatrix& cuda)
     cuda.data_real = nullptr;
     cuda.data_img = nullptr;
 }
+
+void set_cuda_device(int device)
+{
+    cuda_assert(cudaSetDevice(device), __FILE__, __LINE__);
+}
+
+int get_cuda_max_threads_per_block()
+{
+    int device;
+#ifndef CUDA_DEVICE_ID
+    device = cudaGetDevice(&device);
+#else
+    device = CUDA_DEVICE_ID;
+#endif
+
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, device);
+
+    return prop.maxThreadsPerBlock;
+}
+
 } // namespace withcuda

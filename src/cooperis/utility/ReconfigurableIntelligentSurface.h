@@ -35,6 +35,10 @@ typedef std::vector<Matrix> VMatrix;
 
 #define M_PI_X_2 (2*M_PI)
 
+#if defined(WITH_OPENCL)
+#include "../opencl/WithOpencl.h"
+#endif
+
 #define RAD_TO_DEG(x) ((x)*180/M_PI)
 #define RAD_TO_DEG_ROUND(x) (std::round((x)*180/M_PI))
 #define DEG_TO_RAD(x) ((x)*M_PI/180)
@@ -101,6 +105,18 @@ private:
     double cached_thetaTX{};
 
     std::mt19937_64 rng{};
+
+#if defined(WITH_OPENCL)
+    WithOpencl opencl;
+#elif !defined(WITH_CUDA)
+    unsigned int n_max_threads;
+
+    struct thread_gain_args;
+
+    static void gain_compute_phase_CPU_routine(void* thread_args);
+
+#endif
+    void gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad);
 
 public:
     /**

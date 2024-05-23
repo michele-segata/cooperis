@@ -18,15 +18,26 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
+#include <cmath>
+#include <fstream>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_complex_math.h>
-#include <fstream>
+#include <random>
+
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
-#include <random>
-#include "../cuda/WithCuda.h"
 
-#include <cmath>
+#if defined(WITH_OPENCL)
+#include <iostream>
+#elif defined(WITH_CUDA)
+#include "../cuda/WithCuda.h"
+#else
+#include <fcntl.h>
+#include <thread>
+#include <vector>
+
+#define DEFAULT_N_COMPUTE_THREADS 8
+#endif
 
 #define IS_ZERO(x) (std::abs(x) < 1e-10)
 #define EQUALS(a, b) (IS_ZERO(a-b))
@@ -98,6 +109,19 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
 
+#if defined(WITH_CUDA)
+#ifdef CUDA_DEVICE_ID
+    withcuda::cuda_set_device(CUDA_DEVICE_ID);
+#endif
+#elif !defined(WITH_OPENCL)
+#ifdef N_COMPUTE_THREADS
+    n_max_threads = N_COMPUTE_THREADS;
+#else
+    n_max_threads = std::thread::hardware_concurrency();
+#endif
+    if (n_max_threads <= 0)
+        n_max_threads = DEFAULT_N_COMPUTE_THREADS;
+#endif
 }
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
@@ -297,6 +321,168 @@ size_t ReconfigurableIntelligentSurface::angle_to_index(double angle_rad, double
     return lround((angle_rad - min_angle_rad) / angle_range_rad * (n_angles - 1));
 }
 
+#if defined(WITH_OPENCL)
+void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+{
+    WithOpencl::cl_matrix cl_k_du_sin_sin;
+    WithOpencl::cl_matrix cl_k_du_sin_cos;
+    WithOpencl::cl_cmatrix cl_phase;
+
+    this->opencl.cl_matrix_alloc(cl_k_du_sin_sin, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_sin->data);
+    this->opencl.cl_matrix_alloc(cl_k_du_sin_cos, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_cos->data);
+    this->opencl.cl_cmatrix_alloc(cl_phase, Ts, Ps, CL_MEM_READ_WRITE);
+
+    this->opencl.zero_cl_cmatrix(cl_phase);
+
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+            // compute the phase offset due to the incidence of the signal
+            double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
+            double PHI = gsl_matrix_get(coding, m, n);
+            // enqueue the kernel
+            this->opencl.gain_compute_phase(cl_k_du_sin_cos, cl_k_du_sin_sin, n, m, alpha, PHI, cl_phase);
+        }
+    }
+
+    // read the data back and free the memory
+    this->opencl.cl_cmatrix_to_gsl_cmatrix(phase, cl_phase);
+    this->opencl.cl_matrix_free(cl_k_du_sin_sin);
+    this->opencl.cl_matrix_free(cl_k_du_sin_cos);
+    this->opencl.cl_cmatrix_free(cl_phase);
+}
+#elif defined(WITH_CUDA)
+void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+{
+    int max_threads_per_block = withcuda::get_cuda_max_threads_per_block();
+    withcuda::cuda_matrix cuda_k_du_sin_cos;
+    withcuda::cuda_matrix cuda_k_du_sin_sin;
+    withcuda::cuda_cmatrix cuda_phase;
+
+    withcuda::cuda_matrix_alloc(cuda_k_du_sin_cos, k_du_sin_cos->size1, k_du_sin_cos->size2);
+    withcuda::cuda_matrix_alloc(cuda_k_du_sin_sin, k_du_sin_sin->size1, k_du_sin_sin->size2);
+    withcuda::cuda_cmatrix_alloc(cuda_phase, phase->size1, phase->size2);
+
+    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_cos, k_du_sin_cos);
+    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_sin, k_du_sin_sin);
+
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+            // compute the phase offset due to the incidence of the signal
+            double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
+            double PHI = gsl_matrix_get(coding, m, n);
+            // call the kernel to compute the phase
+            withcuda::gain_compute_phase(max_threads_per_block, cuda_k_du_sin_cos, cuda_k_du_sin_sin, n, m, alpha, PHI, cuda_phase);
+        }
+    }
+    withcuda::cuda_matrix_free(cuda_k_du_sin_cos);
+    withcuda::cuda_matrix_free(cuda_k_du_sin_sin);
+
+    withcuda::cuda_cmatrix_to_gsl_cmatrix(phase, cuda_phase);
+    withcuda::cuda_cmatrix_free(cuda_phase);
+}
+#else
+struct ReconfigurableIntelligentSurface::thread_gain_args {
+    ReconfigurableIntelligentSurface* ris;
+    int thread_id;
+    double thetaTX_rad;
+    double phiTX_rad;
+    double thetaRX_rad;
+    double phiRX_rad;
+    int start;
+    int end;
+    vector<CMatrix>* phases;
+};
+
+void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thread_args)
+{
+    // extract the arguments
+    struct thread_gain_args* t_args = (struct thread_gain_args*) thread_args;
+
+    Matrix n_k_du_sin_cos = new_matrix(t_args->ris->k_du_sin_cos);
+    Matrix m_k_du_sin_sin = new_matrix(t_args->ris->k_du_sin_sin);
+    CMatrix complex_matrix = new_cmatrix(t_args->ris->Ts, t_args->ris->Ps);
+    CMatrix tmp_phase = new_cmatrix(t_args->ris->Ts, t_args->ris->Ps);
+    t_args->phases->at(t_args->thread_id) = tmp_phase;
+
+    for (int i = t_args->start; i < t_args->end; i++) {
+        // extract m and n from the linerized index i
+        int m = i / t_args->ris->N;
+        int n = i % t_args->ris->N;
+
+        // compute the phase offset due to the incidence of the signal
+        double alpha = t_args->ris->du_k * (n * sin(t_args->thetaTX_rad) * cos(t_args->phiTX_rad) + m * sin(t_args->thetaTX_rad) * sin(t_args->phiTX_rad));
+        // compute the phase offsets for all the possible phiRX,thetaRX pairs
+        gsl_matrix_memcpy(n_k_du_sin_cos, t_args->ris->k_du_sin_cos);
+        gsl_matrix_memcpy(m_k_du_sin_sin, t_args->ris->k_du_sin_sin);
+        // scale by negative m and n, as these matrices need to be subtracted
+        gsl_matrix_scale(n_k_du_sin_cos, -n);
+        gsl_matrix_scale(m_k_du_sin_sin, -m);
+        gsl_matrix_add(n_k_du_sin_cos, m_k_du_sin_sin);
+        // add phase offset due to the position of the transmitter and add phase offset due to coding
+        gsl_matrix_add_constant(n_k_du_sin_cos, alpha + gsl_matrix_get(t_args->ris->coding, m, n));
+        matrix_to_cmatrix(complex_matrix, n_k_du_sin_cos);
+        gsl_matrix_complex_scale(complex_matrix, t_args->ris->C_0_M1j);
+        exp(complex_matrix);
+        // compute final phases e^-j(...)
+
+        gsl_matrix_complex_add(tmp_phase, complex_matrix);
+    }
+    gsl_matrix_free(n_k_du_sin_cos);
+    gsl_matrix_free(m_k_du_sin_sin);
+    gsl_matrix_complex_free(complex_matrix);
+}
+
+void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+{
+
+    // number of threads to use
+    int n_threads = this->n_max_threads;
+    if (this->n_max_threads > this->M * this->N)
+        n_threads = this->M * this->N;
+
+    // parameters for the threads
+    vector<thread_gain_args> t_args_list(n_threads);
+    vector<thread> gain_threads_list(n_threads);
+    vector<CMatrix> phase_list(n_threads);
+
+    // divide the computation of the gain in n_threads threads
+    unsigned int job_per_thread = (this->M * this->N) / n_threads;
+    int remaining_jobs = (this->M * this->N) % n_threads;
+    int last_start = 0;
+    int last_end = job_per_thread;
+
+    // start the threads
+    for (int i = 0; i < n_threads; i++) {
+        thread_gain_args* t_args = &t_args_list[i];
+        t_args->thread_id = i;
+        t_args->ris = this;
+        t_args->thetaTX_rad = thetaTX_rad;
+        t_args->phiTX_rad = phiTX_rad;
+        t_args->thetaRX_rad = thetaRX_rad;
+        t_args->phiRX_rad = phiRX_rad;
+        t_args->phases = &phase_list;
+
+        if (remaining_jobs > 0) {
+            last_end++;
+            remaining_jobs--;
+        }
+        t_args->start = last_start;
+        t_args->end = last_end;
+        last_start = last_end;
+        last_end += job_per_thread;
+
+        gain_threads_list[i] = thread(gain_compute_phase_CPU_routine, t_args);
+    }
+
+    // wait for all threads to finish and sum up the results
+    for (int i = 0; i < n_threads; i++) {
+        gain_threads_list[i].join();
+        gsl_matrix_complex_add(phase, phase_list[i]);
+        gsl_matrix_complex_free(phase_list[i]);
+    }
+}
+#endif
+
 double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
 
@@ -312,39 +498,11 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
     }
 
     CMatrix phase = new_cmatrix(Ts, Ps);
-
-    Matrix PHI = coding;
-    double alpha;
-
-    withcuda::cuda_matrix cuda_k_du_sin_cos;
-    withcuda::cuda_matrix cuda_k_du_sin_sin;
-    withcuda::cuda_cmatrix cuda_phase;
-
-    withcuda::cuda_matrix_alloc(cuda_k_du_sin_cos, k_du_sin_cos->size1, k_du_sin_cos->size2);
-    withcuda::cuda_matrix_alloc(cuda_k_du_sin_sin, k_du_sin_sin->size1, k_du_sin_sin->size2);
-    withcuda::cuda_cmatrix_alloc(cuda_phase, phase->size1, phase->size2);
-
-    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_cos, k_du_sin_cos);
-    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_sin, k_du_sin_sin);
-
-    for (int m = 0; m < M; m++) {
-        for (int n = 0; n < N; n++) {
-            // compute the phase offset due to the incidence of the signal
-            alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
-            // compute the phase offsets for all the possible phiRX,thetaRX pairs
-            // scale by negative m and n, as these matrices need to be subtracted
-            withcuda::gain_compute_phase(cuda_k_du_sin_cos, cuda_k_du_sin_sin, n, m, alpha, gsl_matrix_get(PHI, m, n), cuda_phase);
-        }
-    }
-    withcuda::cuda_matrix_free(cuda_k_du_sin_cos);
-    withcuda::cuda_matrix_free(cuda_k_du_sin_sin);
+    gain_compute_phase(phase, phiRX_rad, thetaRX_rad, phiTX_rad, thetaTX_rad);
 
     // compute absolute value of all phases, i.e., length of all vectors
     // if length = 0 then all signals were interfering destructively
     // the longer the vector, the more constructively all the signals are summing up together
-    withcuda::cuda_cmatrix_to_gsl_cmatrix(phase, cuda_phase);
-
-    withcuda::cuda_cmatrix_free(cuda_phase);
     Matrix Fa = abs(phase);
     gsl_matrix_complex_free(phase);
 
