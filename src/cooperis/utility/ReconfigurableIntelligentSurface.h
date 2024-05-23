@@ -102,6 +102,14 @@ private:
 
     std::mt19937_64 rng{};
 
+    unsigned int n_max_threads;
+
+    static void gain_compute_phase_CPU_routine(void* thread_args);
+
+    void gain_compute_phase_CPU(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad);
+
+    struct thread_gain_args;
+
 public:
     /**
      * @param frequency frequency in Hz at which the surface is operating
