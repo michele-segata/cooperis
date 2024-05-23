@@ -19,18 +19,23 @@
 //
 
 #include <cmath>
-#include <fcntl.h>
 #include <fstream>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_complex_math.h>
 #include <random>
-#include <thread>
-#include <vector>
 
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
 
+#ifdef WITH_OPENCL
+#include <iostream>
+#else
+#include <fcntl.h>
+#include <thread>
+#include <vector>
+
 #define DEFAULT_N_COMPUTE_THREADS 8
+#endif
 
 #define IS_ZERO(x) (std::abs(x) < 1e-10)
 #define EQUALS(a, b) (IS_ZERO(a-b))
@@ -102,6 +107,7 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
 
+#ifndef WITH_OPENCL
 #ifdef N_COMPUTE_THREADS
     n_max_threads = N_COMPUTE_THREADS;
 #else
@@ -109,6 +115,7 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
 #endif
     if (n_max_threads <= 0)
         n_max_threads = DEFAULT_N_COMPUTE_THREADS;
+#endif
 }
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
@@ -308,6 +315,36 @@ size_t ReconfigurableIntelligentSurface::angle_to_index(double angle_rad, double
     return lround((angle_rad - min_angle_rad) / angle_range_rad * (n_angles - 1));
 }
 
+#ifdef WITH_OPENCL
+void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+{
+    WithOpencl::cl_matrix cl_k_du_sin_sin;
+    WithOpencl::cl_matrix cl_k_du_sin_cos;
+    WithOpencl::cl_cmatrix cl_phase;
+
+    this->opencl.cl_matrix_alloc(cl_k_du_sin_sin, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_sin->data);
+    this->opencl.cl_matrix_alloc(cl_k_du_sin_cos, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_cos->data);
+    this->opencl.cl_cmatrix_alloc(cl_phase, Ts, Ps, CL_MEM_READ_WRITE);
+
+    this->opencl.zero_cl_cmatrix(cl_phase);
+
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+
+            double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
+            double PHI = gsl_matrix_get(coding, m, n);
+            // enqueue the kernel and set the arguments
+            this->opencl.gain_compute_phase(cl_k_du_sin_cos, cl_k_du_sin_sin, n, m, alpha, PHI, cl_phase);
+        }
+    }
+
+    // read the data back and free the memory
+    this->opencl.cl_cmatrix_to_gsl_cmatrix(phase, cl_phase);
+    this->opencl.cl_matrix_free(cl_k_du_sin_sin);
+    this->opencl.cl_matrix_free(cl_k_du_sin_cos);
+    this->opencl.cl_cmatrix_free(cl_phase);
+}
+#else
 struct ReconfigurableIntelligentSurface::thread_gain_args {
     ReconfigurableIntelligentSurface* ris;
     int thread_id;
@@ -359,7 +396,7 @@ void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thre
     gsl_matrix_complex_free(complex_matrix);
 }
 
-void ReconfigurableIntelligentSurface::gain_compute_phase_CPU(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
 
     // number of threads to use
@@ -408,7 +445,7 @@ void ReconfigurableIntelligentSurface::gain_compute_phase_CPU(CMatrix phase, dou
         gsl_matrix_complex_free(phase_list[i]);
     }
 }
-
+#endif
 double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
 
@@ -425,7 +462,7 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
 
     CMatrix phase = new_cmatrix(Ts, Ps);
 
-    gain_compute_phase_CPU(phase, phiRX_rad, thetaRX_rad, phiTX_rad, thetaTX_rad);
+    gain_compute_phase(phase, phiRX_rad, thetaRX_rad, phiTX_rad, thetaTX_rad);
 
     // compute absolute value of all phases, i.e., length of all vectors
     // if length = 0 then all signals were interfering destructively
