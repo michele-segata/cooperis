@@ -16,20 +16,20 @@ void cuda_assert(cudaError_t code, const char* file = __FILE__, int line = __LIN
     }
 }
 
-__global__ void matrix_n_m_compute_kernel(const double* k_du_sin_cos, const double* k_du_sin_sin, double neg_n, double neg_m, double alpha, double PHI, double* dest_real, double* dest_img, size_t size)
+__global__ void gain_compute_phase_kernel(const double* k_du_sin_cos, const double* k_du_sin_sin, double n, double m, double alpha, double PHI, double* phase_real, double* phase_img, size_t size)
 {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
-        double tmp_img = -((neg_n * k_du_sin_cos[i]) + (neg_m * k_du_sin_sin[i]) + alpha + PHI);
-        dest_real[i] += cos(tmp_img);
-        dest_img[i] += sin(tmp_img);
+        double tmp_img = -((n * k_du_sin_cos[i]) + (m * k_du_sin_sin[i]) + alpha + PHI);
+        phase_real[i] += cos(tmp_img);
+        phase_img[i] += sin(tmp_img);
     }
 }
 
-void matrix_n_m_compute(const cuda_matrix& k_du_sin_cos, const cuda_matrix& k_du_sin_sin, double neg_n, double neg_m, double alpha, double PHI, cuda_cmatrix& dest)
+void gain_compute_phase(const cuda_matrix& k_du_sin_cos, const cuda_matrix& k_du_sin_sin, double n, double m, double alpha, double PHI, cuda_cmatrix& phase)
 {
     int num_blocks = (k_du_sin_cos.rows * k_du_sin_cos.cols + CUDA_BLOCK_SIZE - 1) / CUDA_BLOCK_SIZE;
-    matrix_n_m_compute_kernel<<<num_blocks, CUDA_BLOCK_SIZE>>>(k_du_sin_cos.data, k_du_sin_sin.data, neg_n, neg_m, alpha, PHI, dest.data_real, dest.data_img, dest.rows * dest.cols);
+    gain_compute_phase_kernel<<<num_blocks, CUDA_BLOCK_SIZE>>>(k_du_sin_cos.data, k_du_sin_sin.data, n, m, alpha, PHI, dest.data_real, dest.data_img, phase.rows * phase.cols);
     cuda_assert(cudaDeviceSynchronize(), __FILE__, __LINE__);
 }
 
@@ -55,6 +55,8 @@ void cuda_cmatrix_to_gsl_cmatrix(gsl_matrix_complex* gsl, const cuda_cmatrix& cu
     for (unsigned int i = 0; i < cuda.rows; i++)
         for (unsigned int j = 0; j < cuda.cols; j++)
             gsl_matrix_complex_set(gsl, i, j, {data_real[i * cuda.cols + j], data_img[i * cuda.cols + j]});
+    free(data_real);
+    free(data_img);
 }
 
 void cuda_matrix_alloc(cuda_matrix& cuda, unsigned int rows, unsigned int cols)

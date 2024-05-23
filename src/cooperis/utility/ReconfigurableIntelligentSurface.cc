@@ -333,7 +333,7 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
             alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
             // compute the phase offsets for all the possible phiRX,thetaRX pairs
             // scale by negative m and n, as these matrices need to be subtracted
-            withcuda::matrix_n_m_compute(cuda_k_du_sin_cos, cuda_k_du_sin_sin, -n, -m, alpha, gsl_matrix_get(PHI, m, n), cuda_phase);
+            withcuda::gain_compute_phase(cuda_k_du_sin_cos, cuda_k_du_sin_sin, n, m, alpha, gsl_matrix_get(PHI, m, n), cuda_phase);
         }
     }
     withcuda::cuda_matrix_free(cuda_k_du_sin_cos);
