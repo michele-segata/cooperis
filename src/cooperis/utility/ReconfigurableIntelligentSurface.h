@@ -35,7 +35,7 @@ typedef std::vector<Matrix> VMatrix;
 
 #define M_PI_X_2 (2*M_PI)
 
-#ifdef WITH_OPENCL
+#if defined(WITH_OPENCL)
 #include "../opencl/WithOpencl.h"
 #endif
 
@@ -106,9 +106,9 @@ private:
 
     std::mt19937_64 rng{};
 
-#ifdef WITH_OPENCL
+#if defined(WITH_OPENCL)
     WithOpencl opencl;
-#else
+#elif !defined(WITH_CUDA)
     unsigned int n_max_threads;
 
     struct thread_gain_args;

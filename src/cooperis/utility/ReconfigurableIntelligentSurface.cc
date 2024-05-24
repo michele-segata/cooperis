@@ -27,8 +27,10 @@
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
 
-#ifdef WITH_OPENCL
+#if defined(WITH_OPENCL)
 #include <iostream>
+#elif defined(WITH_CUDA)
+#include "../cuda/WithCuda.h"
 #else
 #include <fcntl.h>
 #include <thread>
@@ -107,7 +109,11 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
 
-#ifndef WITH_OPENCL
+#if defined(WITH_CUDA)
+#ifdef CUDA_DEVICE_ID
+    withcuda::cuda_set_device(CUDA_DEVICE_ID);
+#endif
+#elif !defined(WITH_OPENCL)
 #ifdef N_COMPUTE_THREADS
     n_max_threads = N_COMPUTE_THREADS;
 #else
@@ -315,7 +321,7 @@ size_t ReconfigurableIntelligentSurface::angle_to_index(double angle_rad, double
     return lround((angle_rad - min_angle_rad) / angle_range_rad * (n_angles - 1));
 }
 
-#ifdef WITH_OPENCL
+#if defined(WITH_OPENCL)
 void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
     WithOpencl::cl_matrix cl_k_du_sin_sin;
@@ -330,10 +336,10 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
 
     for (int m = 0; m < M; m++) {
         for (int n = 0; n < N; n++) {
-
+            // compute the phase offset due to the incidence of the signal
             double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
             double PHI = gsl_matrix_get(coding, m, n);
-            // enqueue the kernel and set the arguments
+            // enqueue the kernel
             this->opencl.gain_compute_phase(cl_k_du_sin_cos, cl_k_du_sin_sin, n, m, alpha, PHI, cl_phase);
         }
     }
@@ -343,6 +349,36 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
     this->opencl.cl_matrix_free(cl_k_du_sin_sin);
     this->opencl.cl_matrix_free(cl_k_du_sin_cos);
     this->opencl.cl_cmatrix_free(cl_phase);
+}
+#elif defined(WITH_CUDA)
+void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
+{
+    int max_threads_per_block = withcuda::get_cuda_max_threads_per_block();
+    withcuda::cuda_matrix cuda_k_du_sin_cos;
+    withcuda::cuda_matrix cuda_k_du_sin_sin;
+    withcuda::cuda_cmatrix cuda_phase;
+
+    withcuda::cuda_matrix_alloc(cuda_k_du_sin_cos, k_du_sin_cos->size1, k_du_sin_cos->size2);
+    withcuda::cuda_matrix_alloc(cuda_k_du_sin_sin, k_du_sin_sin->size1, k_du_sin_sin->size2);
+    withcuda::cuda_cmatrix_alloc(cuda_phase, phase->size1, phase->size2);
+
+    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_cos, k_du_sin_cos);
+    withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_sin, k_du_sin_sin);
+
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+            // compute the phase offset due to the incidence of the signal
+            double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
+            double PHI = gsl_matrix_get(coding, m, n);
+            // call the kernel to compute the phase
+            withcuda::gain_compute_phase(max_threads_per_block, cuda_k_du_sin_cos, cuda_k_du_sin_sin, n, m, alpha, PHI, cuda_phase);
+        }
+    }
+    withcuda::cuda_matrix_free(cuda_k_du_sin_cos);
+    withcuda::cuda_matrix_free(cuda_k_du_sin_sin);
+
+    withcuda::cuda_cmatrix_to_gsl_cmatrix(phase, cuda_phase);
+    withcuda::cuda_cmatrix_free(cuda_phase);
 }
 #else
 struct ReconfigurableIntelligentSurface::thread_gain_args {
@@ -446,6 +482,7 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
     }
 }
 #endif
+
 double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
 
@@ -461,7 +498,6 @@ double ReconfigurableIntelligentSurface::gain(double phiRX_rad, double thetaRX_r
     }
 
     CMatrix phase = new_cmatrix(Ts, Ps);
-
     gain_compute_phase(phase, phiRX_rad, thetaRX_rad, phiTX_rad, thetaTX_rad);
 
     // compute absolute value of all phases, i.e., length of all vectors
