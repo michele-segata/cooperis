@@ -53,8 +53,12 @@ Then simply compile Plexe as usual:
 make
 ```
 
-### CoopeRIS
-To build CoopeRIS, clone first the repository:
+### CoopeRIS (Multithread support, default)
+
+CoopeRIS can be built with multithread or GPU support to accelerate the
+computation of the RIS. By default, CoopeRIS is built with multithread support.
+First, clone the repository:
+
 ```bash
 git clone https://github.com/michele-segata/cooperis
 cd cooperis
@@ -64,12 +68,78 @@ You can do so in the following way:
 ```bash
 ./configure --with-gsl-include=/opt/local/include --with-gsl-lib=/opt/local/lib
 ```
-Please make sure to change the GSL paths to match your owns.
+
+Please make sure to change the GSL paths to match your owns. You can specify
+the number of compute threads to use during the build process with the
+`COMPUTE_THREADS=n` option. If left unspecified, the number of threads will be
+set to the number of available cores on your machine.
+> [!NOTE]
+> If your machine has a very large number of cores, you might want to limit the
+> number of threads to the number of real cores, excluding hyperthreading ones to
+> achieve best performance.
+
 Finally, simply type
 ```bash
-make
+make [COMPUTE_THREADS=n]
 ```
 to build CoopeRIS.
+
+### CoopeRIS (GPU support)
+
+CoopeRIS can be built with GPU support to accelerate the computation of the RIS.
+Currently, CoopeRIS supports Cuda and OpenCL frameworks.
+
+#### Cuda support
+
+To enable GPU acceleration with Cuda, you need to have the Cuda toolkit installed on your
+machine. Please refer to the
+[official NVIDIA website](https://developer.nvidia.com/cuda-downloads) to
+download the toolkit. Once installed, you can build CoopeRIS with Cuda support
+by specifying the `--with-cuda` and the path to the Cuda include and lib
+folders, as follows:
+
+```bash
+./configure --with-gsl-include=/opt/local/include --with-gsl-lib=/opt/local/lib --with-cuda --with-cuda-include=/opt/local/include --with-cuda-lib=/usr/local/cuda/lib64
+```
+
+Please make sure to change the GSL and Cuda paths to match your owns.
+If you have multiple Cuda-enabled devices on your machine, you can specify the
+number of the Cuda device to use during the build process with the
+`CUDA_DEVICE=n` option. If left unspecified, device 0 will be used. You can
+discover the available devices on your machine by using the `nvidia-smi`
+command.
+
+Finally, simply type.
+
+```bash
+make [CUDA_DEVICE=n]
+```
+
+#### OpenCL support
+
+To enable GPU acceleration with OpenCL, you need to have the OpenCL framework
+installed on your machine. Please refer to the
+[official Khronos website](https://www.khronos.org/opencl/) to download the
+framework. Once installed, you can build CoopeRIS with OpenCL support by
+specifying the `--with-opencl` and the path to the OpenCL include and lib
+folders, as follows:
+
+```bash
+./configure --with-gsl-include=/opt/local/include --with-gsl-lib=/opt/local/lib --with-opencl --with-opencl-include=/opt/local/include --with-opencl-lib=/opt/local/lib
+```
+
+Please make sure to change the GSL and OpenCL paths to match your owns.
+If you have multiple OpenCL-enabled devices or platforms on your machine, you
+can specify the number of the OpenCL device and platform to use during the
+build process with the `CL_DEVICE=n` and `CL_PLATFORM=n` options. If left
+unspecified, device 0 and platform 0 will be used. You can discover the
+available devices and platforms on your machine by using the `clinfo` command.
+
+Finally, simply type.
+
+```bash
+make [CL_DEVICE=n CL_PLATFORM=m]
+```
 
 > [!WARNING]
 > CoopeRIS includes a large set of unit tests to ensure that all mathematical computations are properly working.
