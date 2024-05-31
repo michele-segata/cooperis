@@ -38,9 +38,7 @@ cleanbin:
 
 ifeq ($(COMPUTE_ENGINE),opencl)
     COPTS += -DCL_TARGET_OPENCL_VERSION=300 -DWITH_OPENCL
-    LIBS += -lOpenCL
 endif
 ifeq ($(COMPUTE_ENGINE),cuda)
     COPTS += -DWITH_CUDA
-    LIBS += -L/usr/local/cuda/lib64 -lcudart
 endif

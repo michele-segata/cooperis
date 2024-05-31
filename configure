@@ -42,13 +42,42 @@ veins = Library(name="Veins", library="veins", default_path="../veins",
                 images_folder="images", version_script="print-veins-version")
 gsl = ExternalLibrary(name="GNU Scientific Library (GSL)", library="gsl", lflags="-lgsl -lgslcblas -lm")
 
+gpu_support = None
+parallel_paradigm = None
+
+if len(sys.argv) > 1 and "--with-cuda" in sys.argv:
+    sys.argv.remove("--with-cuda")
+    gpu_support = "cuda"
+
+elif len(sys.argv) > 1 and "--with-opencl" in sys.argv:
+    sys.argv.remove("--with-opencl")
+    gpu_support = "opencl"
+
+if gpu_support == "cuda":
+    parallel_paradigm = ExternalLibrary(name="CUDA", library="cuda", lflags="-lcudart")
+elif gpu_support == "opencl":
+    parallel_paradigm = ExternalLibrary(
+        name="OPENCL", library="opencl", lflags="-lOpenCL"
+    )
+
 libraries = LibraryChecker()
 libraries.add_lib(plexe)
 libraries.add_lib(veins)
 libraries.add_lib(gsl)
+if parallel_paradigm is not None:
+    libraries.add_lib(parallel_paradigm)
 
 # Start with default flags
 makemake_flags = ["-f", "--deep", "--no-deep-includes", "--make-so", "-I", ".", "-o", "cooperis", "-O", "out", "-p", "COOPERIS"]
+
+if gpu_support == "cuda":
+    makemake_flags.append("-K")
+    makemake_flags.append("COMPUTE_ENGINE=cuda")
+elif gpu_support == "opencl":
+    makemake_flags.append("-K")
+    makemake_flags.append("COMPUTE_ENGINE=opencl")
+else:
+    makemake_flags.append("-pthread")
 
 run_libs = []
 run_neds = []
