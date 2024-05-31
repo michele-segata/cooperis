@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2022 Michele Segata <segata@ccs-labs.org>
+// Copyright (C) 2024 Michele Segata <segata@ccs-labs.org>
 //
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
@@ -27,7 +27,7 @@
 #define COOPERIS_VERSION_MAJOR 1
 #define COOPERIS_VERSION_MINOR 0
 #define COOPERIS_VERSION_PATCH 0
-#define COOPERIS_VERSION_ALPHA 1
+#define COOPERIS_VERSION_ALPHA 0
 
 // Explicitly check Veins version number
 #if !(VEINS_VERSION_MAJOR == 5 && VEINS_VERSION_MINOR >= 0)

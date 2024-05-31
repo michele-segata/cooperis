@@ -39,6 +39,20 @@ Then simply compile Veins as usual:
 make
 ```
 
+### Plexe
+CooperRIS example is included within Plexe (starting from version 3.1.3).
+Clone it using [this link](https://github.com/michele-segata/plexe) and be sure to choose the 3.1.3 version:
+```bash
+git clone https://github.com/michele-segata/plexe
+cd plexe
+git checkout -b plexe-3.1.3-work plexe-3.1.3
+```
+Then simply compile Plexe as usual:
+```bash
+./configure
+make
+```
+
 ### CoopeRIS
 To build CoopeRIS, clone first the repository:
 ```bash
@@ -62,12 +76,21 @@ to build CoopeRIS.
 > Such unit tests are located in the `subprojects/cooperis_catch` folder.
 > We will soon add instructions on how to run them.
 
-### Plexe
+### Plexe example
 
-> [!WARNING]
-> This section is still incomplete, we are working on the full release.
-
-We are currently working on adding a sample scenario with some vehicles using a RIS-enalbed communication.
+The `plexe_cooperis` subproject example includes a simple intersection scenario where a car is static on a road, while a second one is travelling being tracked by the RIS.
+To run the project simply build the subproject:
+```bash
+cd plexe/subprojects/plexe_cooperis
+source setenv
+./configure
+make
+```
+Then run the example with:
+```bash
+cd examples/plexe_cooperis
+plexe_cooperis_run -u Cmdenv -c TrackingTIntersection -r 0
+```
 
 ### Matlab
 

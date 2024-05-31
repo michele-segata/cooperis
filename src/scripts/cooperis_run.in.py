@@ -35,7 +35,7 @@ import argparse
 # ^-- contents of out/config.py go here
 
 def relpath(s):
-    cooperis_root = os.path.dirname(os.path.realpath(__file__))
+    cooperis_root = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
     return os.path.relpath(os.path.join(cooperis_root, s), '.')
 
 parser = argparse.ArgumentParser('Run a Cooperis simulation')

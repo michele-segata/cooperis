@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2022 Michele Segata <segata@ccs-labs.org>
+// Copyright (C) 2022-2024 Michele Segata <segata@ccs-labs.org>
 //
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
@@ -134,6 +134,7 @@ bool PhyLayerRis::isReflectiveMetaSurface() const
 double PhyLayerRis::getMetasurfaceGain(double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad) const
 {
     if (!isRIS) throw cRuntimeError("Requesting metasurface gain on a PHY that is not a metasurface but a standard node");
+    // TODO: why is this getConfiguration call necessary? Test what happens if removed
     double configPhiR_rad, configPhiI_rad, configThetaR_rad, configThetaI_rad;
     ris->getConfiguration(configPhiR_rad, configThetaR_rad, configPhiI_rad, configThetaI_rad);
     double gain = ris->gain(phiR_rad, thetaR_rad, phiI_rad, thetaI_rad);
