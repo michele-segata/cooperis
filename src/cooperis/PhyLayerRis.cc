@@ -94,6 +94,7 @@ void PhyLayerRis::initialize(int stage)
             d_theta = par("d_theta");
 
             ris = new ReconfigurableIntelligentSurface(getSimulation()->getActiveEnvir()->getConfigEx()->getActiveRunNumber(), centerFrequency, codingStates, cellsPerLambda, lambdaSize, 1.0, d_theta, d_phi);
+            ris->setMaxWorkerThreads(par("maxWorkerThreads"));
             annotations = AnnotationManagerAccess().getIfExists();
 
             nodesAntennaHeight = par("nodesAntennaHeight");

@@ -109,18 +109,9 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
 
-#if defined(WITH_CUDA)
-#ifdef CUDA_DEVICE_ID
+#if defined(WITH_CUDA) && defined(CUDA_DEVICE_ID)
+    // set the CUDA device
     withcuda::cuda_set_device(CUDA_DEVICE_ID);
-#endif
-#elif !defined(WITH_OPENCL)
-#ifdef N_COMPUTE_THREADS
-    n_max_threads = N_COMPUTE_THREADS;
-#else
-    n_max_threads = std::thread::hardware_concurrency();
-#endif
-    if (n_max_threads <= 0)
-        n_max_threads = DEFAULT_N_COMPUTE_THREADS;
 #endif
 }
 
@@ -392,6 +383,14 @@ struct ReconfigurableIntelligentSurface::thread_gain_args {
     int end;
     vector<CMatrix>* phases;
 };
+
+void ReconfigurableIntelligentSurface::setMaxWorkerThreads(int n_threads)
+{
+    if (n_threads <= 0)
+        this->n_max_threads = std::thread::hardware_concurrency();
+    else
+        this->n_max_threads = n_threads;
+}
 
 void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thread_args)
 {

@@ -185,6 +185,14 @@ public:
      */
     void applyConfiguration(Matrix config);
 
+#if !defined(WITH_CUDA) && !defined(WITH_OPENCL)
+    /**
+     * Sets the maximum number of threads to use for the computation of the gains
+     * @param n_max_threads maximum number of threads to use
+     */
+    void setMaxWorkerThreads(int n_max_threads);
+#endif
+
     /**
      * Computes the gain of the antenna given a specific pair of incidence and reflection angles
      * @param phiRX_rad the reflection angle phi (azimuth) in radians

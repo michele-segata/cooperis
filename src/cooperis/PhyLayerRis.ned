@@ -110,4 +110,6 @@ simple PhyLayerRis extends BasePhyLayer
         double d_phi @unit(rad) = default(1deg);
         double d_theta @unit(rad) = default(1deg);
 
+        //max worker threads for CPU parallelized gain computation
+        int maxWorkerThreads = default(0);
 }
