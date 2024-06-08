@@ -9,24 +9,16 @@
 #include <CL/cl.h>
 #endif
 
-#ifndef CL_PLATFORM_ID
-#define CL_PLATFORM_ID 0
-#endif
-
-#ifndef CL_DEVICE_ID
-#define CL_DEVICE_ID 0
-#endif
-
 #define CL_MAX_PLATFORMS 10
 #define CL_MAX_DEVICES 10
 
-WithOpencl::WithOpencl()
+WithOpencl::WithOpencl(int platform_id, int device_id)
 {
 
-    if (CL_PLATFORM_ID < 0 || CL_PLATFORM_ID >= CL_MAX_PLATFORMS)
+    if (platform_id < 0 || platform_id >= CL_MAX_PLATFORMS)
         throw std::runtime_error("Invalid platform id, must be between 0 and " + std::to_string(CL_MAX_PLATFORMS - 1));
 
-    if (CL_DEVICE_ID < 0 || CL_DEVICE_ID >= CL_MAX_DEVICES)
+    if (device_id < 0 || device_id >= CL_MAX_DEVICES)
         throw std::runtime_error("Invalid device id, must be between 0 and " + std::to_string(CL_MAX_DEVICES - 1));
 
     std::vector<cl_platform_id> platforms(CL_MAX_PLATFORMS);
@@ -37,18 +29,18 @@ WithOpencl::WithOpencl()
     // get the platform
     cl_assert(clGetPlatformIDs(CL_MAX_PLATFORMS, &platforms[0], &num_platforms), __FILE__, __LINE__, "error getting the platforms");
 
-    if (CL_PLATFORM_ID >= num_platforms)
+    if (platform_id >= num_platforms)
         throw std::runtime_error("Invalid platform id, must be between 0 and " + std::to_string(num_platforms - 1));
 
-    this->platform = platforms[CL_PLATFORM_ID];
+    this->platform = platforms[platform_id];
 
     // get the device
     cl_assert(clGetDeviceIDs(this->platform, CL_DEVICE_TYPE_GPU, CL_MAX_DEVICES, &devices[0], &num_devices), __FILE__, __LINE__, "error getting the device");
 
-    if (CL_DEVICE_ID >= num_devices)
+    if (device_id >= num_devices)
         throw std::runtime_error("Invalid device id, must be between 0 and " + std::to_string(num_devices - 1));
 
-    this->device = devices[CL_DEVICE_ID];
+    this->device = devices[device_id];
 
     // check if the device supports double precision
     cl_device_fp_config config;

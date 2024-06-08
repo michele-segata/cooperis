@@ -27,11 +27,9 @@
 #include "ReconfigurableIntelligentSurface.h"
 #include "Utils.h"
 
-#if defined(WITH_OPENCL)
-#include <iostream>
-#elif defined(WITH_CUDA)
+#if defined(WITH_CUDA)
 #include "../cuda/WithCuda.h"
-#else
+#elif !defined(WITH_OPENCL)
 #include <fcntl.h>
 #include <thread>
 #include <vector>
@@ -108,11 +106,6 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
 
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
-
-#if defined(WITH_CUDA) && defined(CUDA_DEVICE_ID)
-    // set the CUDA device
-    withcuda::cuda_set_device(CUDA_DEVICE_ID);
-#endif
 }
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
@@ -128,6 +121,9 @@ ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()
     gsl_vector_free(theta);
     gsl_vector_free(phi);
     gsl_vector_free(E);
+#if defined(WITH_OPENCL)
+    delete opencl;
+#endif
 }
 
 void ReconfigurableIntelligentSurface::computePhases(Matrix phases, double phiR_rad, double thetaR_rad, double phiI_rad, double thetaI_rad)
@@ -313,17 +309,22 @@ size_t ReconfigurableIntelligentSurface::angle_to_index(double angle_rad, double
 }
 
 #if defined(WITH_OPENCL)
+void ReconfigurableIntelligentSurface::openclInit(int platformId, int deviceId)
+{
+    this->opencl = new WithOpencl(platformId, deviceId);
+}
+
 void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
     WithOpencl::cl_matrix cl_k_du_sin_sin;
     WithOpencl::cl_matrix cl_k_du_sin_cos;
     WithOpencl::cl_cmatrix cl_phase;
 
-    this->opencl.cl_matrix_alloc(cl_k_du_sin_sin, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_sin->data);
-    this->opencl.cl_matrix_alloc(cl_k_du_sin_cos, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_cos->data);
-    this->opencl.cl_cmatrix_alloc(cl_phase, Ts, Ps, CL_MEM_READ_WRITE);
+    this->opencl->cl_matrix_alloc(cl_k_du_sin_sin, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_sin->data);
+    this->opencl->cl_matrix_alloc(cl_k_du_sin_cos, Ts, Ps, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_du_sin_cos->data);
+    this->opencl->cl_cmatrix_alloc(cl_phase, Ts, Ps, CL_MEM_READ_WRITE);
 
-    this->opencl.zero_cl_cmatrix(cl_phase);
+    this->opencl->zero_cl_cmatrix(cl_phase);
 
     for (int m = 0; m < M; m++) {
         for (int n = 0; n < N; n++) {
@@ -331,17 +332,22 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
             double alpha = du_k * (n * sin(thetaTX_rad) * cos(phiTX_rad) + m * sin(thetaTX_rad) * sin(phiTX_rad));
             double PHI = gsl_matrix_get(coding, m, n);
             // enqueue the kernel
-            this->opencl.gain_compute_phase(cl_k_du_sin_cos, cl_k_du_sin_sin, n, m, alpha, PHI, cl_phase);
+            this->opencl->gain_compute_phase(cl_k_du_sin_cos, cl_k_du_sin_sin, n, m, alpha, PHI, cl_phase);
         }
     }
 
     // read the data back and free the memory
-    this->opencl.cl_cmatrix_to_gsl_cmatrix(phase, cl_phase);
-    this->opencl.cl_matrix_free(cl_k_du_sin_sin);
-    this->opencl.cl_matrix_free(cl_k_du_sin_cos);
-    this->opencl.cl_cmatrix_free(cl_phase);
+    this->opencl->cl_cmatrix_to_gsl_cmatrix(phase, cl_phase);
+    this->opencl->cl_matrix_free(cl_k_du_sin_sin);
+    this->opencl->cl_matrix_free(cl_k_du_sin_cos);
+    this->opencl->cl_cmatrix_free(cl_phase);
 }
 #elif defined(WITH_CUDA)
+void ReconfigurableIntelligentSurface::setCudaDeviceId(int deviceId)
+{
+    withcuda::set_cuda_device(deviceId);
+}
+
 void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
 {
     int max_threads_per_block = withcuda::get_cuda_max_threads_per_block();

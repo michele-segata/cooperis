@@ -69,21 +69,27 @@ You can do so in the following way:
 ./configure --with-gsl-include=/opt/local/include --with-gsl-lib=/opt/local/lib
 ```
 
-Please make sure to change the GSL paths to match your owns. You can specify
-the number of compute threads to use for the computation of the RIS gain by
-using the `*.**.nicRis.phyRis.maxComputeThreads` param in the `omnetpp.ini` file
-of your simulation. If left unspecified, the number of threads will be
-set to the number of available cores on your machine.
-> [!NOTE]
-> If your machine has a very large number of cores, you might want to limit the
-> number of threads to the number of real cores, excluding hyperthreading ones to
-> achieve best performance.
+Please make sure to change the GSL paths to match your owns.
 
 Finally, simply type
+
 ```bash
 make
 ```
+
 to build CoopeRIS.
+
+> [!NOTE]
+> You can specify
+> the number of compute threads to use for the computation of the RIS gain by
+> using the `*.**.nicRis.phyRis.maxWorkerThreads` param in the `omnetpp.ini` file
+> of your simulation. If left unspecified, the number of threads will be
+> set to the number of available cores on your machine.
+
+> [!WARNING]
+> If your machine has a very large number of cores, you might want to limit the
+> number of threads to the number of real cores, excluding hyperthreading ones to
+> achieve best performance.
 
 ### CoopeRIS (GPU support)
 
@@ -104,17 +110,21 @@ folders, as follows:
 ```
 
 Please make sure to change the GSL and Cuda paths to match your owns.
-If you have multiple Cuda-enabled devices on your machine, you can specify the
-number of the Cuda device to use during the build process with the
-`CUDA_DEVICE=n` option. If left unspecified, device 0 will be used. You can
-discover the available devices on your machine by using the `nvidia-smi`
-utility command.
 
 Finally, simply type.
 
 ```bash
-make [CUDA_DEVICE=n]
+make
 ```
+
+to build CoopeRIS with Cuda acceleration.
+
+> [!NOTE]
+> If you have multiple Cuda-enabled devices on your machine, you can specify the
+> number of the Cuda device to use by using the `*.**.nicRis.phyRis.cudaDeviceId`
+> param in the `omnetpp.ini` file of your simulation. If left unspecified, device
+> 0 will be used. You can discover the available devices on your machine by using
+> the `nvidia-smi` utility command.
 
 #### OpenCL support
 
@@ -130,17 +140,22 @@ folders, as follows:
 ```
 
 Please make sure to change the GSL and OpenCL paths to match your owns.
-If you have multiple OpenCL-enabled devices or platforms on your machine, you
-can specify the number of the OpenCL device and platform to use during the
-build process with the `CL_DEVICE=n` and `CL_PLATFORM=n` options. If left
-unspecified, device 0 and platform 0 will be used. You can discover the
-available devices and platforms on your machine by using the `clinfo` utility command.
 
 Finally, simply type.
 
 ```bash
-make [CL_DEVICE=n CL_PLATFORM=m]
+make
 ```
+
+to build CoopeRIS with OpenCL acceleration.
+
+> [!NOTE]
+> If you have multiple OpenCL-enabled devices or platforms on your machine, you
+> can specify the number of the OpenCL device and platform by using the
+> `*.**.nicRis.phyRis.openclDeviceId` and `*.**.nicRis.phyRis.openclPlatformId`
+> params in the `omnetpp.ini` file of your simulation. If left unspecified, device
+> 0 and platform 0 will be used. You can discover the
+> available devices and platforms on your machine by using the `clinfo` utility command.
 
 > [!WARNING]
 > CoopeRIS includes a large set of unit tests to ensure that all mathematical computations are properly working.

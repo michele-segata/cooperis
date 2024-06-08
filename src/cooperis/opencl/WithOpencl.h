@@ -31,7 +31,11 @@ public:
         unsigned int cols;
     };
 
-    WithOpencl();
+    /**
+     * @param platform_id the platform id
+     * @param device_id the device id
+     */
+    WithOpencl(int platform_id, int device_id);
     virtual ~WithOpencl();
 
     /**

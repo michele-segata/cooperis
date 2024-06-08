@@ -107,7 +107,7 @@ private:
     std::mt19937_64 rng{};
 
 #if defined(WITH_OPENCL)
-    WithOpencl opencl;
+    WithOpencl* opencl;
 #elif !defined(WITH_CUDA)
     unsigned int n_max_threads;
 
@@ -185,7 +185,20 @@ public:
      */
     void applyConfiguration(Matrix config);
 
-#if !defined(WITH_CUDA) && !defined(WITH_OPENCL)
+#if defined(WITH_CUDA)
+    /**
+     * Sets the CUDA device to use for the computation of the gains
+     * @param deviceId CUDA device ID
+     */
+    void setCudaDeviceId(int deviceId);
+#elif defined(WITH_OPENCL)
+    /**
+     * Sets the OpenCL device and platform to use for the computation of the gains
+     * @param platformId OpenCL platform ID
+     * #param deviceId OpenCL device ID
+     */
+    void openclInit(int platformId, int deviceId);
+#else
     /**
      * Sets the maximum number of threads to use for the computation of the gains
      * @param n_max_threads maximum number of threads to use

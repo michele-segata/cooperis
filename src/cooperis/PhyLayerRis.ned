@@ -112,4 +112,12 @@ simple PhyLayerRis extends BasePhyLayer
 
         //max worker threads for CPU parallelized gain computation
         int maxWorkerThreads = default(0);
+
+        //cuda device id
+        int cudaDeviceId = default(0);
+
+
+        //openCL device and platform id
+        int openclPlatformId = default(0);
+        int openclDeviceId = default(0);
 }

@@ -95,6 +95,8 @@ void cuda_cmatrix_free(cuda_cmatrix& cuda)
 
 void set_cuda_device(int device)
 {
+    if (device < 0)
+        throw std::runtime_error("Invalid cuda device id, must be >= 0");
     cuda_assert(cudaSetDevice(device), __FILE__, __LINE__);
 }
 
