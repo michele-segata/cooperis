@@ -380,14 +380,13 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
 #else
 struct ReconfigurableIntelligentSurface::thread_gain_args {
     ReconfigurableIntelligentSurface* ris;
-    int thread_id;
     double thetaTX_rad;
     double phiTX_rad;
     double thetaRX_rad;
     double phiRX_rad;
     int start;
     int end;
-    vector<CMatrix>* phases;
+    CMatrix* tmp_phase;
 };
 
 void ReconfigurableIntelligentSurface::setMaxWorkerThreads(int n_threads)
@@ -407,7 +406,7 @@ void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thre
     Matrix m_k_du_sin_sin = new_matrix(t_args->ris->k_du_sin_sin);
     CMatrix complex_matrix = new_cmatrix(t_args->ris->Ts, t_args->ris->Ps);
     CMatrix tmp_phase = new_cmatrix(t_args->ris->Ts, t_args->ris->Ps);
-    t_args->phases->at(t_args->thread_id) = tmp_phase;
+    *(t_args->tmp_phase) = tmp_phase;
 
     for (int i = t_args->start; i < t_args->end; i++) {
         // extract m and n from the linerized index i
@@ -451,30 +450,22 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
     vector<CMatrix> phase_list(n_threads);
 
     // divide the computation of the gain in n_threads threads
-    unsigned int job_per_thread = (this->M * this->N) / n_threads;
-    int remaining_jobs = (this->M * this->N) % n_threads;
-    int last_start = 0;
-    int last_end = job_per_thread;
+    int jobs_per_thread = (N * M) / n_threads;
+    int remainder = (N * M) % n_threads;
+    int start = 0;
 
     // start the threads
     for (int i = 0; i < n_threads; i++) {
         thread_gain_args* t_args = &t_args_list[i];
-        t_args->thread_id = i;
         t_args->ris = this;
         t_args->thetaTX_rad = thetaTX_rad;
         t_args->phiTX_rad = phiTX_rad;
         t_args->thetaRX_rad = thetaRX_rad;
         t_args->phiRX_rad = phiRX_rad;
-        t_args->phases = &phase_list;
+        t_args->tmp_phase = &phase_list[i];
 
-        if (remaining_jobs > 0) {
-            last_end++;
-            remaining_jobs--;
-        }
-        t_args->start = last_start;
-        t_args->end = last_end;
-        last_start = last_end;
-        last_end += job_per_thread;
+        t_args->start = start;
+        start = t_args->end = start + jobs_per_thread + (i < remainder ? 1 : 0);
 
         gain_threads_list[i] = thread(gain_compute_phase_CPU_routine, t_args);
     }
