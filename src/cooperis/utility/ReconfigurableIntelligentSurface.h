@@ -113,7 +113,7 @@ private:
 
     struct thread_gain_args;
 
-    static void gain_compute_phase_CPU_routine(void* thread_args);
+    static void* gain_compute_phase_CPU_routine(void* thread_args);
 
 #endif
     void gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad);

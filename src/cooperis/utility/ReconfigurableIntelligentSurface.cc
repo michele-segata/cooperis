@@ -31,7 +31,8 @@
 #include "../cuda/WithCuda.h"
 #elif !defined(WITH_OPENCL)
 #include <fcntl.h>
-#include <thread>
+#include <pthread.h>
+#include <unistd.h>
 #include <vector>
 
 #define DEFAULT_N_COMPUTE_THREADS 8
@@ -392,12 +393,12 @@ struct ReconfigurableIntelligentSurface::thread_gain_args {
 void ReconfigurableIntelligentSurface::setMaxWorkerThreads(int n_threads)
 {
     if (n_threads <= 0)
-        this->n_max_threads = std::thread::hardware_concurrency();
+        this->n_max_threads = sysconf(_SC_NPROCESSORS_ONLN);
     else
         this->n_max_threads = n_threads;
 }
 
-void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thread_args)
+void* ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thread_args)
 {
     // extract the arguments
     struct thread_gain_args* t_args = (struct thread_gain_args*) thread_args;
@@ -434,6 +435,7 @@ void ReconfigurableIntelligentSurface::gain_compute_phase_CPU_routine(void* thre
     gsl_matrix_free(n_k_du_sin_cos);
     gsl_matrix_free(m_k_du_sin_sin);
     gsl_matrix_complex_free(complex_matrix);
+    pthread_exit(NULL);
 }
 
 void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double phiRX_rad, double thetaRX_rad, double phiTX_rad, double thetaTX_rad)
@@ -446,7 +448,7 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
 
     // parameters for the threads
     vector<thread_gain_args> t_args_list(n_threads);
-    vector<thread> gain_threads_list(n_threads);
+    vector<pthread_t> gain_threads_list(n_threads);
     vector<CMatrix> phase_list(n_threads);
 
     // divide the computation of the gain in n_threads threads
@@ -467,12 +469,14 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
         t_args->start = start;
         start = t_args->end = start + jobs_per_thread + (i < remainder ? 1 : 0);
 
-        gain_threads_list[i] = thread(gain_compute_phase_CPU_routine, t_args);
+        pthread_t ptid;
+        pthread_create(&ptid, NULL, &gain_compute_phase_CPU_routine, (void*) t_args);
+        gain_threads_list[i] = ptid;
     }
 
     // wait for all threads to finish and sum up the results
     for (int i = 0; i < n_threads; i++) {
-        gain_threads_list[i].join();
+        pthread_join(gain_threads_list[i], NULL);
         gsl_matrix_complex_add(phase, phase_list[i]);
         gsl_matrix_complex_free(phase_list[i]);
     }
