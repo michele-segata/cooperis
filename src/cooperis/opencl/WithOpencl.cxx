@@ -125,7 +125,6 @@ void WithOpencl::gain_compute_phase(const cl_matrix& k_du_sin_cos, const cl_matr
 
     // enqueue the kernel
     cl_assert(clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_work_size, &max_work_group_size, 0, NULL, NULL), __FILE__, __LINE__, "error while enqueuing the kernel");
-    cl_assert(clFinish(queue), __FILE__, __LINE__, "error while finishing the queue");
 }
 
 void WithOpencl::cl_cmatrix_to_gsl_cmatrix(gsl_matrix_complex* gsl, const cl_cmatrix& cl)

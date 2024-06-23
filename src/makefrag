@@ -44,24 +44,12 @@ ifeq ($(COMPUTE_ENGINE),cuda)
     NVCC=nvcc
     NVCC_FLAGS= --compiler-options -fPIC
 
-    CUDA_SRC_DIR=cooperis/cuda
-
-    OBJS+= $O/$(CUDA_SRC_DIR)/WithCuda.o
     CXXFLAGS += -DWITH_CUDA
 
-    ifdef CUDA_DEVICE
-        CXXFLAGS += -DCUDA_DEVICE_ID=$(CUDA_DEVICE)
-    endif
+    OBJS+= $O/cooperis/cuda/WithCuda.o
 else ifeq ($(COMPUTE_ENGINE),opencl)
     # OpenCL parallelization
     CXXFLAGS += -DCL_TARGET_OPENCL_VERSION=300 -DWITH_OPENCL
-
-    ifdef CL_DEVICE
-        CXXFLAGS += -DCL_DEVICE_ID=$(CL_DEVICE)
-    endif
-    ifdef CL_PLATFORM
-        CXXFLAGS += -DCL_PLATFORM_ID=$(CL_PLATFORM)
-    endif
 
     OBJS+= $O/cooperis/opencl/WithOpencl.o
 else
