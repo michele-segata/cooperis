@@ -356,8 +356,6 @@ void ReconfigurableIntelligentSurface::gain_compute_phase(CMatrix phase, double 
     withcuda::cuda_matrix cuda_k_du_sin_sin;
     withcuda::cuda_cmatrix cuda_phase;
 
-    withcuda::cuda_matrix_alloc(cuda_k_du_sin_cos, k_du_sin_cos->size1, k_du_sin_cos->size2);
-    withcuda::cuda_matrix_alloc(cuda_k_du_sin_sin, k_du_sin_sin->size1, k_du_sin_sin->size2);
     withcuda::cuda_cmatrix_alloc(cuda_phase, phase->size1, phase->size2);
 
     withcuda::gsl_matrix_to_cuda_matrix(cuda_k_du_sin_cos, k_du_sin_cos);
