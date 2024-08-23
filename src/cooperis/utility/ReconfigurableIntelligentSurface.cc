@@ -107,6 +107,7 @@ ReconfigurableIntelligentSurface::ReconfigurableIntelligentSurface(int seed, dou
 
     // startup configuration
     configureMetaSurface(0, 0, 0, 0);
+
 }
 
 ReconfigurableIntelligentSurface::~ReconfigurableIntelligentSurface()

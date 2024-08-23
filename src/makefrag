@@ -40,6 +40,7 @@ endif
 ################################################################################ Parallelization pardigm
 
 ifeq ($(COMPUTE_ENGINE),cuda)
+    # CUDA parallelization
     # NVCC compiler options:
     NVCC=nvcc
     NVCC_FLAGS= --compiler-options -fPIC

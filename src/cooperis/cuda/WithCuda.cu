@@ -101,12 +101,7 @@ void set_cuda_device(int device)
 
 int get_cuda_max_threads_per_block()
 {
-    int device;
-#ifndef CUDA_DEVICE_ID
-    device = cudaGetDevice(&device);
-#else
-    device = CUDA_DEVICE_ID;
-#endif
+    int device = cudaGetDevice(&device);
 
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, device);
