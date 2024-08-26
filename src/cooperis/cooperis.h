@@ -25,7 +25,7 @@
 
 // Version number of last release ("major.minor.patch") or an alpha version, if nonzero
 #define COOPERIS_VERSION_MAJOR 1
-#define COOPERIS_VERSION_MINOR 0
+#define COOPERIS_VERSION_MINOR 1
 #define COOPERIS_VERSION_PATCH 0
 #define COOPERIS_VERSION_ALPHA 0
 
