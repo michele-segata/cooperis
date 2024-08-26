@@ -36,3 +36,39 @@ VEINS_NEED_MSG6 := $(shell echo ${OMNETPP_VERSION} | grep "^5" >/dev/null 2>&1; 
 ifeq ($(VEINS_NEED_MSG6),0)
   MSGCOPTS += --msg6
 endif
+
+################################################################################ Parallelization pardigm
+
+ifeq ($(COMPUTE_ENGINE),cuda)
+    # CUDA parallelization
+    # NVCC compiler options:
+    NVCC=nvcc
+    NVCC_FLAGS= --compiler-options -fPIC
+
+    CXXFLAGS += -DWITH_CUDA
+
+    OBJS+= $O/cooperis/cuda/WithCuda.o
+else ifeq ($(COMPUTE_ENGINE),opencl)
+    # OpenCL parallelization
+    CXXFLAGS += -DCL_TARGET_OPENCL_VERSION=300 -DWITH_OPENCL
+
+    OBJS+= $O/cooperis/opencl/WithOpencl.o
+else
+    # CPU parallelization
+    LIBS+= -lpthread
+    ifdef COMPUTE_THREADS
+        CXXFLAGS += -DN_COMPUTE_THREADS=$(COMPUTE_THREADS)
+    endif
+endif
+
+# Compile OpenCl C++ source files to object files:
+$O/%.o: %.cxx %.h
+	@$(MKPATH) $(dir $@)
+	$(qecho) "$<"
+	$(Q)$(CXX) -c $(CXXFLAGS) $(COPTS) -o $@ $<
+
+# Compile CUDA source files to object files:
+$O/%.o : %.cu %.h
+	@$(MKPATH) $(dir $@)
+	$(qecho) "$<"
+	@$(NVCC) $(NVCC_FLAGS) -c $< -o $@

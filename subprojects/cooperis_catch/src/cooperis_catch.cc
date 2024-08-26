@@ -28,6 +28,13 @@
 #include <iostream>
 #include <sstream>
 
+#define OPENCL_PLATFORM 0
+#define OPENCL_DEVICE 0
+
+#define CUDA_DEVICE 0
+
+#define N_THREADS 8
+
 #ifndef STANDALONE
 using veins::Coord;
 using veins::Angles;
@@ -115,6 +122,13 @@ TEST_CASE("Nearest phase") {
 
 TEST_CASE("Metasurface phases") {
     ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+#if defined(WITH_OPENCL)
+    ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+    ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+    ris.setMaxWorkerThreads(N_THREADS);
+#endif
     CsvReader phases;
 
     int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
@@ -134,6 +148,13 @@ TEST_CASE("Metasurface phases") {
 
 TEST_CASE("Metasurface gains") {
     ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+#if defined(WITH_OPENCL)
+    ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+    ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+    ris.setMaxWorkerThreads(N_THREADS);
+#endif
     CsvReader gains;
 
     int phiRs[] = {-180, -135, -90, -45, 0, 45, 90, 135, 180};
@@ -418,6 +439,13 @@ TEST_CASE("Generation of gains") {
     SECTION("Output gains for plotting") {
     for (auto lambdaSize : lambdaSizes) {
             ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, lambdaSize);
+#if defined(WITH_OPENCL)
+            ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+            ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+            ris.setMaxWorkerThreads(N_THREADS);
+#endif
 
             int phiRs[] = {-45};
             for (auto &phiR: phiRs) {
@@ -432,6 +460,13 @@ TEST_CASE("Generation of gains") {
     }
     SECTION("Output gains for different TX positions") {
         ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+#if defined(WITH_OPENCL)
+        ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+        ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+        ris.setMaxWorkerThreads(N_THREADS);
+#endif
         Coord ris_v1(1, 0, 0);
         Coord ris_v2(0, 0, -1);
         Coord ris_pos(0, 0, 0);
@@ -454,6 +489,13 @@ TEST_CASE("Generation of gains") {
 TEST_CASE("Generation of gains, tx.y=100") {
     SECTION("Output gains for different TX positions, tx.y=100") {
         ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+#if defined(WITH_OPENCL)
+        ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+        ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+        ris.setMaxWorkerThreads(N_THREADS);
+#endif
         Coord ris_v1(1, 0, 0);
         Coord ris_v2(0, 0, -1);
         Coord ris_pos(0, 0, 0);
@@ -488,6 +530,13 @@ std::string join(Iter begin, Iter end, std::string const& separator)
 
 TEST_CASE("Metasurface phases for combined configs (average strategy)") {
     ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+#if defined(WITH_OPENCL)
+    ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+    ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+    ris.setMaxWorkerThreads(N_THREADS);
+#endif
     CsvReader phases;
 
     vector<vector<int>> phiRs = {{-45, 45}, {-45, 45, 135}, {-45, 45, 130}};
@@ -521,6 +570,13 @@ TEST_CASE("Metasurface phases for combined configs (average strategy)") {
 
 TEST_CASE("Combination of configs") {
     ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+#if defined(WITH_OPENCL)
+    ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
+#elif defined(WITH_CUDA)
+    ris.setCudaDeviceId(CUDA_DEVICE);
+#else
+    ris.setMaxWorkerThreads(N_THREADS);
+#endif
     vector<vector<int>> phiRs = {{-45, 45}, {-45, 45, 135}, {-45, 45, 130}};
     bool random[] = {true, false};
     for (vector<int> phiR : phiRs) {
