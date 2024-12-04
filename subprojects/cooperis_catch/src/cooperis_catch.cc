@@ -121,7 +121,10 @@ TEST_CASE("Nearest phase") {
 }
 
 TEST_CASE("Metasurface phases") {
-    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+    int n = 4;
+    int cellsPerLambda = 3;
+    int lambdaSize = 5;
+    ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
     ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
@@ -138,7 +141,7 @@ TEST_CASE("Metasurface phases") {
             std::stringstream filename;
             filename << "matlab/phases_phiR_";
             filename << phiR;
-            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_4_pl_3_nl_5.csv";
+            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_" << n << "_pl_" << cellsPerLambda << "_nl_" << lambdaSize << ".csv";
             phases.read(filename.str());
             ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
             REQUIRE(matrix_equals(ris.getPhases(), phases, phiR));
@@ -147,7 +150,10 @@ TEST_CASE("Metasurface phases") {
 }
 
 TEST_CASE("Metasurface gains") {
-    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+    int n = 4;
+    int cellsPerLambda = 3;
+    int lambdaSize = 5;
+    ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
     ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
@@ -164,7 +170,7 @@ TEST_CASE("Metasurface gains") {
             std::stringstream filename;
             filename << "matlab/gain_phiR_";
             filename << phiR;
-            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_4_pl_3_nl_5.csv";
+            filename << "_thetaR_45_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_" << n << "_pl_" << cellsPerLambda << "_nl_" << lambdaSize << ".csv";
             gains.read(filename.str());
             ris.configureMetaSurface(DEG_TO_RAD(phiR), DEG_TO_RAD(45), 0, 0);
             double p_tot;
@@ -435,10 +441,12 @@ TEST_CASE("Elevation angle to nearest index conversion") {
 
 TEST_CASE("Generation of gains") {
 
+    int n = 8;
+    int cellsPerLambda = 5;
     int lambdaSizes[] = {5, 10, 20};
     SECTION("Output gains for plotting") {
     for (auto lambdaSize : lambdaSizes) {
-            ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, lambdaSize);
+            ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
             ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
@@ -459,7 +467,10 @@ TEST_CASE("Generation of gains") {
         }
     }
     SECTION("Output gains for different TX positions") {
-        ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+        int n = 8;
+        int cellsPerLambda = 5;
+        int lambdaSize = 5;
+        ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
         ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
@@ -488,7 +499,10 @@ TEST_CASE("Generation of gains") {
 
 TEST_CASE("Generation of gains, tx.y=100") {
     SECTION("Output gains for different TX positions, tx.y=100") {
-        ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+        int n = 8;
+        int cellsPerLambda = 5;
+        int lambdaSize = 5;
+        ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
         ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
@@ -529,7 +543,10 @@ std::string join(Iter begin, Iter end, std::string const& separator)
 }
 
 TEST_CASE("Metasurface phases for combined configs (average strategy)") {
-    ReconfigurableIntelligentSurface ris(0, 25e9, 4, 3, 5);
+    int n = 4;
+    int cellsPerLambda = 3;
+    int lambdaSize = 5;
+    ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
     ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
@@ -551,7 +568,7 @@ TEST_CASE("Metasurface phases for combined configs (average strategy)") {
             filename << join(phiR.begin(), phiR.end(), "_");
             filename << "_thetaR_";
             filename << join(thetaR.begin(), thetaR.end(), "_");
-            filename << "_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_4_pl_3_nl_5.csv";
+            filename << "_phiI_0_thetaI_0_phiTX_0_thetaTX_0_n_" << n << "_pl_" << cellsPerLambda << "_nl_" << lambdaSize << ".csv";
             phases.read(filename.str());
 
             VMatrix configs;
@@ -569,7 +586,10 @@ TEST_CASE("Metasurface phases for combined configs (average strategy)") {
 }
 
 TEST_CASE("Combination of configs") {
-    ReconfigurableIntelligentSurface ris(0, 25e9, 8, 5, 5);
+    int n = 8;
+    int cellsPerLambda = 5;
+    int lambdaSize = 5;
+    ReconfigurableIntelligentSurface ris(0, 25e9, n, cellsPerLambda, lambdaSize);
 #if defined(WITH_OPENCL)
     ris.openclInit(OPENCL_PLATFORM, OPENCL_DEVICE);
 #elif defined(WITH_CUDA)
