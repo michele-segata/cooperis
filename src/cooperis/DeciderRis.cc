@@ -45,6 +45,8 @@ simtime_t DeciderRis::processNewSignal(AirFrame* msg)
 
     EV_TRACE << "DeciderRis: incoming frame with id " << frame->getOriginalId() << " with power " << (10*log10(recvPower)) << "\n";
     EV_TRACE << "Number of reflections: " << (frame->getPathsArraySize() - 1) << " total distance: " << frame->getTotalDistance() << "\n";
+    if (frame->getPathsArraySize() > 0)
+        EV_TRACE << "Number of reflections: " << (frame->getPathsArraySize() - 1) << " total distance: " << frame->getTotalDistance() << "\n";
     stringstream ss;
     ss << "Paths: [";
     for (int i = 0; i < frame->getPathsArraySize(); i++)
@@ -55,7 +57,7 @@ simtime_t DeciderRis::processNewSignal(AirFrame* msg)
 
     ss << "RIS Gains: [";
     for (int i = 0; i < frame->getRisGain_dBArraySize(); i++)
-        ss << (10*log10(frame->getRisGain_dB(i))) << " dB, ";
+        ss << frame->getRisGain_dB(i) << " dB, ";
     ss << "]\n";
     EV_TRACE << ss.str();
     ss.str(std::string());
