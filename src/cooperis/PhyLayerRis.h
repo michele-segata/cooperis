@@ -168,6 +168,8 @@ protected:
      */
     std::unique_ptr<AnalogueModel> initializeRisPathLoss(ParameterMap& params);
 
+    std::unique_ptr<AnalogueModel> initializeETSI_TR_138_901(ParameterMap& params);
+
     /**
      * @brief Creates and returns an instance of the Decider with the specified
      * name.

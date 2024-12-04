@@ -28,6 +28,7 @@
 #include "cooperis/analogueModel/RisPathLoss.h"
 #include "cooperis/analogueModel/SimplePathlossModelRis.h"
 #include "cooperis/analogueModel/SimpleObstacleShadowingRis.h"
+#include "cooperis/analogueModel/ETSI_TR_138_901.h"
 
 #include <memory>
 
@@ -187,6 +188,9 @@ unique_ptr<AnalogueModel> PhyLayerRis::getAnalogueModelFromName(std::string name
     if (name == "RisPathLoss") {
         return initializeRisPathLoss(params);
     }
+    if (name == "ETSI_TR_138_901") {
+        return initializeETSI_TR_138_901(params);
+    }
     return BasePhyLayer::getAnalogueModelFromName(name, params);
 }
 
@@ -243,6 +247,20 @@ unique_ptr<AnalogueModel> PhyLayerRis::initializeRisPathLoss(ParameterMap& param
     double centerFrequency = params["carrierFrequency"].doubleValue();
     int n = params["n"].longValue();
     return make_unique<RisPathLoss>(this, alpha, useTorus, useProductOfDistances, playgroundSize, centerFrequency, n);
+}
+
+unique_ptr<AnalogueModel> PhyLayerRis::initializeETSI_TR_138_901(ParameterMap& params)
+{
+
+    // init with default value
+    bool useTorus = world->useTorus();
+    const Coord& playgroundSize = *(world->getPgs());
+
+    ParameterMap::iterator it;
+
+    ObstacleControl* obstacleControlP = dynamic_cast<ObstacleControl*>(veins::findModuleByPath("obstaclesRis"));
+    if (!obstacleControlP) throw cRuntimeError("initializeETSI_TR_138_901(): cannot find ObstacleControl module");
+    return make_unique<ETSI_TR_138_901>(this, *obstacleControlP, useTorus, playgroundSize);
 }
 
 unique_ptr<Decider> PhyLayerRis::getDeciderFromName(std::string name, ParameterMap& params)
