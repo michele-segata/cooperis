@@ -34,7 +34,7 @@ sys.path.insert(0, "../../src/scripts/")
 from library import Library, LibraryChecker, ExternalLibrary
 
 cooperis = Library(name="CoopeRIS", library="cooperis", default_path="../../",
-                   versions=["1.0"], source_folder="src/cooperis",
+                   versions=["1.0", "1.1"], source_folder="src/cooperis",
                    lib_folder="src", images_folder="images",
                    version_script="print-cooperis-version")
 veins = Library(name="Veins", library="veins", default_path="../../../veins",
