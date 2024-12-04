@@ -109,6 +109,9 @@ simple PhyLayerRis extends BasePhyLayer
         // angular resolution of the model for phi and theta
         double d_phi @unit(rad) = default(1deg);
         double d_theta @unit(rad) = default(1deg);
+        // transmission/reception gain. this is simply added to the transmission/received power and does not consider antenna directionality
+        double txGain @unit(dB) = default(0dB);
+        double rxGain @unit(dB) = default(0dB);
 
         //max worker threads for CPU parallelized gain computation
         int maxWorkerThreads = default(0);

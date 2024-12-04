@@ -57,6 +57,7 @@ protected:
     bool ignoreNonReflectedSignals = false;
     bool ignoreShadowedSignals = false;
     bool ignoreNoiseAndInterference = false;
+    double rxGain;
 
     double myBusyTime;
     double myStartTime;
@@ -101,12 +102,13 @@ public:
      * @brief Initializes the Decider with a pointer to its PhyLayer and
      * specific values for threshold and sensitivity
      */
-    DeciderRis(cComponent* owner, DeciderToPhyInterface* phy, double sensitivity, double bRate, bool ignoreNonReflectedSignals, bool ignoreShadowedSignals, bool ignoreNoiseAndInterference, int myIndex = -1, bool collectCollisionStatistics = false)
+    DeciderRis(cComponent* owner, DeciderToPhyInterface* phy, double sensitivity, double bRate, bool ignoreNonReflectedSignals, bool ignoreShadowedSignals, bool ignoreNoiseAndInterference, double rxGain, int myIndex = -1, bool collectCollisionStatistics = false)
         : BaseDecider(owner, phy, sensitivity, myIndex)
         , bitrate(bRate)
         , ignoreNonReflectedSignals(ignoreNonReflectedSignals)
         , ignoreShadowedSignals(ignoreShadowedSignals)
         , ignoreNoiseAndInterference(ignoreNoiseAndInterference)
+        , rxGain(rxGain)
         , myBusyTime(0)
         , myStartTime(simTime().dbl())
         , collectCollisionStats(collectCollisionStatistics)

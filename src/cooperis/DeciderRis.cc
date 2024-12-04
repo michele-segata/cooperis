@@ -41,10 +41,11 @@ simtime_t DeciderRis::processNewSignal(AirFrame* msg)
 
     // get the receiving power of the Signal at start-time and center frequency
     Signal& signal = frame->getSignal();
+    EV_TRACE << "DeciderRis: incoming frame with id " << frame->getOriginalId() << " with power " << (10*log10(signal.getAtCenterFrequency())) << " (w/o gain)\n";
+    signal *= rxGain;
     double recvPower = signal.getAtCenterFrequency();
 
-    EV_TRACE << "DeciderRis: incoming frame with id " << frame->getOriginalId() << " with power " << (10*log10(recvPower)) << "\n";
-    EV_TRACE << "Number of reflections: " << (frame->getPathsArraySize() - 1) << " total distance: " << frame->getTotalDistance() << "\n";
+    EV_TRACE << "DeciderRis: incoming frame with id " << frame->getOriginalId() << " with power " << (10*log10(recvPower)) << "(after rx gain)\n";
     if (frame->getPathsArraySize() > 0)
         EV_TRACE << "Number of reflections: " << (frame->getPathsArraySize() - 1) << " total distance: " << frame->getTotalDistance() << "\n";
     stringstream ss;

@@ -106,6 +106,10 @@ void PhyLayerRis::initialize(int stage)
 
             nodesAntennaHeight = par("nodesAntennaHeight");
         }
+        else {
+            txGain = pow(10, par("txGain").doubleValue()/10);
+            rxGain = pow(10, par("rxGain").doubleValue()/10);
+        }
 
         ignoreNonReflectedSignals = par("ignoreNonReflectedSignals");
         ignoreShadowedSignals = par("ignoreShadowedSignals");
@@ -286,7 +290,7 @@ unique_ptr<AnalogueModel> PhyLayerRis::initializeObstacleShadowing(ParameterMap&
 
 unique_ptr<Decider> PhyLayerRis::initializeDeciderRis(ParameterMap& params)
 {
-    DeciderRis* dec = new DeciderRis(this, this, minPowerLevel, bitrate, ignoreNonReflectedSignals, ignoreShadowedSignals, ignoreNoiseAndInterference, -1, false);
+    DeciderRis* dec = new DeciderRis(this, this, minPowerLevel, bitrate, ignoreNonReflectedSignals, ignoreShadowedSignals, ignoreNoiseAndInterference, rxGain, -1, false);
     return std::unique_ptr<DeciderRis>(std::move(dec));
 }
 
@@ -456,6 +460,7 @@ unique_ptr<AirFrame> PhyLayerRis::encapsMsg(cPacket* macPkt, double txPower, boo
     else {
         frame->setTotalDistance(0);
         frame->setPathsArraySize(0);
+        txPower *= txGain;
     }
 
     // encapsulate the mac packet into the phy frame

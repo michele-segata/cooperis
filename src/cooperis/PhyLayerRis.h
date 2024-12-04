@@ -122,6 +122,8 @@ protected:
     int lambdaSize = 5;
     double d_phi = M_PI / 180;
     double d_theta = M_PI / 180;
+    double txGain = 0;
+    double rxGain = 0;
 
     ReconfigurableIntelligentSurface* ris = nullptr;
 
