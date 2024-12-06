@@ -22,6 +22,7 @@
 
 #include "ETSI_TR_138_901.h"
 #include "cooperis/messages/AirFrameRis_m.h"
+#include <omnetpp.h>
 
 using namespace veins;
 
@@ -76,6 +77,8 @@ void ETSI_TR_138_901::filterSignal(Signal* signal)
 
 double ETSI_TR_138_901::lineOfSightPathLoss(double f, const Coord &sender, const Coord &receiver)
 {
+    // shadow fading sigma
+    static double sigma_sf = 4;
     static double h_e = 1.0;
     static double c = 299792458;
     double h_s = sender.z;
@@ -92,19 +95,21 @@ double ETSI_TR_138_901::lineOfSightPathLoss(double f, const Coord &sender, const
     if (d2d <= d_bp) {
         // TODO: the formula in the TR is valid only for distances greater than 10 meters
         // Here we assume that below 10 meters we have the same attenuation
-        pl_db = 32.4 + 21 * log10(d3d) + 20 * log10(f/1e9);
+        pl_db = 32.4 + 21 * log10(d3d) + 20 * log10(f/1e9) + normal(0, sigma_sf);
         if (d2d < 10)
             EV_WARN << "using ETSI TR 138.901 path loss model for a distance smaller than 10 m" << endl;
     }
     else
         // TODO: additional assumption. the base station is assumed to be 10 meters from ground
         // here we use the actual height of the transmitter
-        pl_db = 32.4 + 40 * log10(d3d) + 20 * log10(f/1e9) - 9.5 * log10(pow(d_bp, 2) + pow(h_s - h_r, 2));
+        pl_db = 32.4 + 40 * log10(d3d) + 20 * log10(f/1e9) - 9.5 * log10(pow(d_bp, 2) + pow(h_s - h_r, 2)) + normal(0, sigma_sf);
     return pl_db;
 }
 
 double ETSI_TR_138_901::nonLineOfSightPathLoss(double f, const Coord &sender, const Coord &receiver)
 {
+    // shadow fading sigma
+    static double sigma_sf = 7.82;
     double h_r = receiver.z;
     Coord sender2d = sender;
     Coord receiver2d = receiver;
@@ -116,6 +121,6 @@ double ETSI_TR_138_901::nonLineOfSightPathLoss(double f, const Coord &sender, co
         EV_WARN << "using ETSI TR 138.901 path loss model for a distance smaller than 10 m" << endl;
     else if (d2d > 5000)
         EV_WARN << "using ETSI TR 138.901 path loss model for a distance larger than 5 km" << endl;
-    double pl_db = 35.3 * log10(d3d) + 22.4 + 21.3 * log10(f/1e9) - 0.3 * (h_r - 1.5);
+    double pl_db = 35.3 * log10(d3d) + 22.4 + 21.3 * log10(f/1e9) - 0.3 * (h_r - 1.5) + normal(0, sigma_sf);
     return std::max(lineOfSightPathLoss(f, sender, receiver), pl_db);
 }
