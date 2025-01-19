@@ -180,11 +180,29 @@ plexe_cooperis_run -u Cmdenv -c TrackingTIntersection -r 0
 
 ### Matlab
 
-> [!WARNING]
-> This section is still incomplete, we are working on the full release.
+The `matlab` folder contains the scripts that have been used for development and to check the correctness of the simulator implementation.
+It can also be used to play around with RIS parameters and quickly check its behavior in terms of gain.
+To do so, open and run the `plotFarField.m` script inside the `matlab` folder.
+You can change RIS parameters directly inside the script.
 
 ### Scientific documentation
 
-> [!WARNING]
-> We are in the process of publishing an accepted paper on CoopeRIS, which will explain to user the model in detail.
-> We will update the repository as soon as the article will be available online.
+For a complete mathematical description of the model, please check the following article:
+_M. Segata, P. Casari, M. Lestas, A. Papadopoulos, D. Tyrovolas, T. Saeed, G. K. Karagiannidis, and C. Liaskos,_ **"CoopeRIS: A framework for the simulation of reconfigurable intelligent surfaces in cooperative driving environments,"**, Elsevier Computer Networks, Special Issue on Advances in Wireless Networks Simulation, vol. 248, Jun. 2024
+
+This is available as open access article at the [publisher's webpage](https://www.sciencedirect.com/science/article/pii/S1389128624002755?via%3Dihub).
+
+If you use CoopeRIS for your work, we would appreciate a citation:
+```bibtex
+@article{segata2024cooperis,
+  author = {Segata, Michele and Casari, Paolo and Lestas, Marios and Papadopoulos, Alexandros and Tyrovolas, Dimitrios and Saeed, Taqwa and Karagiannidis, George K. and Liaskos, Christos},
+  doi = {10.1016/j.comnet.2024.110443},
+  title = {{CoopeRIS: A framework for the simulation of reconfigurable intelligent surfaces in cooperative driving environments}},
+  journal = {Elsevier Computer Networks, Special Issue on Advances in Wireless Networks Simulation},
+  issn = {1389-1286},
+  publisher = {Elsevier},
+  month = {6},
+  volume = {248},
+  year = {2024}
+}
+```
