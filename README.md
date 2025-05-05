@@ -41,11 +41,11 @@ make
 
 ### Plexe
 CooperRIS example is included within Plexe (starting from version 3.1.3).
-Clone it using [this link](https://github.com/michele-segata/plexe) and be sure to choose the 3.1.3 version:
+Clone it using [this link](https://github.com/michele-segata/plexe) and be sure to **choose the 3.1.4** version:
 ```bash
 git clone https://github.com/michele-segata/plexe
 cd plexe
-git checkout -b plexe-3.1.3-work plexe-3.1.3
+git checkout -b plexe-3.1.4-work plexe-3.1.4
 ```
 Then simply compile Plexe as usual:
 ```bash
