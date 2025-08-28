@@ -34,11 +34,11 @@ sys.path.insert(0, "./src/scripts/")
 from library import Library, LibraryChecker, ExternalLibrary
 
 plexe = Library(name="Plexe", library="plexe", default_path="../plexe",
-                versions=["3.1.3"], source_folder="src/plexe",
+                versions=["3.1.3", "3.1.4", "3.2"], source_folder="src/plexe",
                 lib_folder="src", images_folder="images",
                 version_script="print-plexe-version")
 veins = Library(name="Veins", library="veins", default_path="../veins",
-                versions=["5.2"], source_folder="src/veins", lib_folder="src",
+                versions=["5.2", "5.3", "5.3.1"], source_folder="src/veins", lib_folder="src",
                 images_folder="images", version_script="print-veins-version")
 gsl = ExternalLibrary(name="GNU Scientific Library (GSL)", library="gsl", lflags="-lgsl -lgslcblas -lm")
 
@@ -67,7 +67,7 @@ if parallel_paradigm_libs is not None:
     libraries.add_lib(parallel_paradigm_libs)
 
 # Start with default flags
-makemake_flags = ["-f", "--deep", "--no-deep-includes", "--make-so", "-I", ".", "-o", "cooperis", "-O", "out", "-p", "COOPERIS"]
+makemake_flags = ["-f", "--deep", "--make-so", "-I", ".", "-o", "cooperis", "-O", "out", "-p", "COOPERIS"]
 
 if gpu_support:
     makemake_flags.append("-K")

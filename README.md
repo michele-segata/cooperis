@@ -8,7 +8,7 @@ CoopeRIS is a Plexe/Veins framework enabling the simulation of reconfigurable in
 ## Building
 
 CoopeRIS depends on the Plexe software ecosystem, so SUMO, OMNeT++, Veins, and of course Plexe.
-With respect to SUMO, please consider installing version 1.18.0, whereas for OMNeT++ use 6.0.1.
+With respect to SUMO, please consider installing version 1.20.0, whereas for OMNeT++ use 6.2.0.
 
 ### GNU scientific library
 CoopeRIS requires you need to install the GNU scientific library.
@@ -29,7 +29,7 @@ brew install gsl
 CooperRIS works on a customized version of Veins.
 Clone it using [this link](https://github.com/michele-segata/veins/tree/cooperis) and be sure to choose the `cooperis` branch:
 ```bash
-git clone https://github.com/michele-segata/veins/tree/cooperis
+git clone https://github.com/michele-segata/veins.git
 cd veins
 git checkout cooperis
 ```
@@ -41,11 +41,11 @@ make
 
 ### Plexe
 CooperRIS example is included within Plexe (starting from version 3.1.3).
-Clone it using [this link](https://github.com/michele-segata/plexe) and be sure to **choose the 3.1.4** version:
+Clone it using [this link](https://github.com/michele-segata/plexe) and be sure to **choose the 3.2** version:
 ```bash
 git clone https://github.com/michele-segata/plexe
 cd plexe
-git checkout -b plexe-3.1.4-work plexe-3.1.4
+git checkout -b plexe-3.2-work plexe-3.2
 ```
 Then simply compile Plexe as usual:
 ```bash
@@ -177,6 +177,18 @@ Then run the example with:
 cd examples/plexe_cooperis
 plexe_cooperis_run -u Cmdenv -c TrackingTIntersection -r 0
 ```
+
+In addition, a simple `HelloPlexeApp` application has been added.
+This application, after 18 seconds, makes the static vehicle send an Hello to the moving one using the mmWave interface and reflecting the signal via the RIS.
+This has been configured inside the `omnetpp.ini` file in the following way:
+```
+*.node[*].numPlexeApps = 1
+*.node[*].plexeApp[0].typename = "HelloPlexeApp"
+*.node[*].plexeApp[0].interfaceToUse = "COOPERIS"
+*.node[*].plexeApp[0].sendMessageAfter = 18s
+*.node[*].plexeApp[0].senderVehicleId = 1
+```
+For more details, look at the source code of the `HelloPlexeApp` module inside Plexe.
 
 ### Matlab
 
